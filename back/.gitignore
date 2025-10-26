@@ -8,7 +8,6 @@ build/
 
 # === Entornos ===
 .env
-.env.*
 
 # === Logs ===
 *.log
