@@ -119,6 +119,7 @@ export const deleteUsuario = (req, res) => {
 // =========================
 // Login de usuario, verifica email y password, devuelve datos del usuario si es válido
 export const loginUsuario = (req, res) => {
+  console.log("Datos recibidos en login:", req.body);
   const { email, password } = req.body;
 
   if (!email || !password)

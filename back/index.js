@@ -28,6 +28,6 @@ app.get("/", (req, res) => {
 });
 
 //Levanta el servidor o escucha
-app.listen(8000,()=>{
-    console.log("Escuchando puerto 8000");
+app.listen(3000,()=>{
+    console.log("Escuchando puerto 3000");
 })
