@@ -1,18 +1,130 @@
-.login-container {
-  height: 100vh;
-  background-color: #f8f9fa;
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f5f6fa;
+  padding: 2rem 0;
+  box-sizing: border-box;
+  overflow: hidden; /* Añadimos esto para controlar el scroll */
 }
 
+/* Card */
 .login-card {
   width: 100%;
-  max-width: 380px;
+  max-width: 420px;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 8px 30px rgba(14, 118, 103, 0.08);
+  padding: 28px;
+  box-sizing: border-box;
+  position: relative;
+  z-index: 1;
 }
 
-.btn-success {
-  background-color: #0e7667 !important;
+/* Brand */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.brand-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #0e7667;
+  box-shadow: 0 2px 6px rgba(14,118,103,0.25);
+}
+
+.brand h1 {
+  font-size: 1rem;
+  margin: 0;
+  color: #0e7667;
+  font-weight: 700;
+}
+
+/* Title */
+.title {
+  margin: 8px 0 18px;
+  font-size: 1.5rem;
+  color: #163f36;
+  font-weight: 700;
+}
+
+/* Alert error */
+.alert-error {
+  background: #fdecea;
+  color: #8b2222;
+  padding: 10px 12px;
+  border-radius: 8px;
+  margin-bottom: 14px;
+  font-size: 0.95rem;
+  border: 1px solid #f5c2c2;
+}
+
+/* Form */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.label {
+  font-size: 0.9rem;
+  color: #495057;
+  margin-bottom: 4px;
+}
+
+.input {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #e6e9eb;
+  background: #fff;
+  font-size: 0.95rem;
+  outline: none;
+  transition: box-shadow 0.15s, border-color 0.15s;
+}
+
+.input:focus {
+  border-color: rgba(14,118,103,0.6);
+  box-shadow: 0 6px 18px rgba(14,118,103,0.06);
+}
+
+/* Button primary (verde) */
+.btn-primary {
+  background: #0e7667;
+  color: #fff;
   border: none;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 4px;
+  transition: transform 0.12s ease, background 0.12s ease, box-shadow 0.12s;
 }
 
-.btn-success:hover {
-  background-color: #07574e !important;
+.btn-primary:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #0b5e52;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(11,94,82,0.12);
+}
+
+/* Responsive */
+@media (max-width: 576px) {
+  .login-card {
+    padding: 18px;
+    border-radius: 10px;
+  }
+
+  .title {
+    font-size: 1.25rem;
+  }
 }

@@ -1,0 +1,23 @@
+@media print {
+    .sidebar-container,
+    .navbar,
+    .footer,
+    .no-print {
+      display: none !important;  
+    }
+  
+    .participantes-card {
+      box-shadow: none !important;
+      border: none !important;
+    }
+  
+    .print-header {
+      margin-bottom: 1rem;
+    }
+  
+    body {
+      margin: 0;
+      padding: 0;
+      background: white;
+    }
+  }

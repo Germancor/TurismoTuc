@@ -74,7 +74,7 @@ export const getResenas = (req, res) => {
     JOIN Excursiones e ON r.id_excursion = e.id_excursion
     LEFT JOIN Reservas resv ON r.id_reserva = resv.id_reserva
     LEFT JOIN Turistas t ON resv.id_turista = t.id_turista
-    WHERE r.eliminado = 0 AND r.estado = 'publicada'
+    WHERE r.eliminado = 0
     ORDER BY r.fecha_resena DESC;
   `;
   pool.query(sql, (err, results) => {
@@ -195,5 +195,63 @@ export const deleteMultimedia = (req, res) => {
     if (result.affectedRows === 0)
       return res.status(404).json({ message: "Archivo no encontrado" });
     res.json({ message: "Archivo eliminado (baja lógica) correctamente" });
+  });
+};
+
+
+// Obtener reseña por ID
+export const getResenaById = (req, res) => {
+  const { id } = req.params;
+  const sql = `
+    SELECT 
+      r.id_resena, e.titulo AS excursion, t.nombre AS turista,
+      r.calificacion, r.comentario, r.fecha_resena, r.estado
+    FROM Reseñas r
+    JOIN Excursiones e ON r.id_excursion = e.id_excursion
+    LEFT JOIN Reservas resv ON r.id_reserva = resv.id_reserva
+    LEFT JOIN Turistas t ON resv.id_turista = t.id_turista
+    WHERE r.id_resena = ? AND r.eliminado = 0
+  `;
+  pool.query(sql, [id], (err, results) => {
+    if (err) {
+      console.error("Error al obtener reseña:", err);
+      return res.status(500).json({ message: "Error al obtener reseña" });
+    }
+    if (results.length === 0)
+      return res.status(404).json({ message: "Reseña no encontrada" });
+    res.json(results[0]);
+  });
+};
+
+// =============================
+// ACTUALIZAR RESEÑA (Admin)
+// =============================
+export const updateResena = (req, res) => {
+  const { id } = req.params;
+  const { comentario, estado } = req.body;
+
+  if (!comentario && !estado) {
+    return res
+      .status(400)
+      .json({ message: "Debe enviar al menos un campo para actualizar." });
+  }
+
+  const sql = `
+    UPDATE Reseñas
+    SET comentario = ?, estado = ?
+    WHERE id_resena = ? AND eliminado = 0
+  `;
+  const values = [comentario || "", estado || "pendiente", id];
+
+  pool.query(sql, values, (err, result) => {
+    if (err) {
+      console.error("Error al actualizar reseña:", err);
+      return res.status(500).json({ message: "Error al actualizar reseña" });
+    }
+
+    if (result.affectedRows === 0)
+      return res.status(404).json({ message: "Reseña no encontrada" });
+
+    res.json({ message: "Reseña actualizada correctamente" });
   });
 };

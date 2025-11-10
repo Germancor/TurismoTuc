@@ -18,9 +18,9 @@
 
 /* Enlaces */
 .footer a {
-  color: #ffffffcc;
+  color: rgba(255, 255, 255, 0.7);
   text-decoration: none;
-  transition: color 0.2s ease;
+  transition: color 0.2s ease-in-out;
 }
 
 .footer a:hover {

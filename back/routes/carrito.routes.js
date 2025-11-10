@@ -1,19 +1,33 @@
+// back/routes/carrito.routes.js
+import express from "express";
+import {
+  getCarritoByTurista,
+  createCarrito,
+  addItemCarrito,
+  getItemsCarrito,
+  deleteItemCarrito,
+  updateCantidadItem
+} from "../controllers/carrito.controller.js";
+
 const router = express.Router();
 
-import {
-    getCarritoByTurista,
-    createCarrito,
-    addItemCarrito,
-    getItemsCarrito,
-    deleteItemCarrito,
-  } from "../controllers/carrito.controller.js";
+// ✅ ahora las URLs quedan prolijas
 
+// GET  /api/carrito/9                -> carrito de turista 9
+router.get("/:id_turista", getCarritoByTurista);
 
-// Carrito
-router.get("/:id_turista/carrito", getCarritoByTurista);
-router.post("/carrito", createCarrito);
-router.post("/carrito/item", addItemCarrito);
-router.get("/carrito/:id_carrito/items", getItemsCarrito);
-router.delete("/carrito/item/:id_item", deleteItemCarrito);
+// POST /api/carrito                  -> crear carrito (casi no lo vamos a usar desde el front)
+router.post("/", createCarrito);
+
+// POST /api/carrito/item             -> agregar item
+router.post("/item", addItemCarrito);
+
+// GET  /api/carrito/5/items          -> items del carrito 5
+router.get("/:id_carrito/items", getItemsCarrito);
+
+// DELETE /api/carrito/item/12        -> borrar item
+router.delete("/item/:id_item", deleteItemCarrito);
+// PUT    /api/carrito/item/15        -> actualizar cantidad item
+router.put("/item/:id_item", updateCantidadItem);
 
 export default router;

@@ -4,6 +4,8 @@ import {
   getTokens,
   validarToken,
   getResenas,
+  getResenaById,
+  updateResena,
   createResena,
   deleteResena,
   getMultimediaByExcursion,
@@ -21,6 +23,9 @@ router.get("/tokens/:token", validarToken);
 router.get("/", getResenas);
 router.post("/", createResena);
 router.delete("/:id", deleteResena);
+router.get("/:id", getResenaById);
+router.put("/:id", updateResena);
+
 
 // Multimedia
 router.get("/multimedia/:id_excursion", getMultimediaByExcursion);

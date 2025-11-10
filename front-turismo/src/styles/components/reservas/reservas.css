@@ -1,0 +1,6 @@
+/* Opciones sin cupo */
+option:disabled {
+  color: rgb(248, 2, 2);          /* texto rojo */
+  font-style: italic;   /* cursiva */
+  background-color: #f8f9fa; /* un fondo más claro */
+}
