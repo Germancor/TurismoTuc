@@ -558,12 +558,41 @@ export const webhookMercadoPago = async (req, res) => {
 
     console.log("🛒 Items encontrados:", items.length);
 
-    // ✅ Crear UNA reserva por cada item
+    // 🔁 Procesar cada item
     for (const item of items) {
+
+      // 1️⃣ Descontar cupos correctamente
+      const [updateResult] = await pool.promise().query(
+        `UPDATE fechasExcursion
+         SET cupo_disponible = cupo_disponible - ?
+         WHERE id_fecha = ?
+         AND cupo_disponible >= ?`,
+        [
+          item.cantidad_personas,
+          item.id_fecha,
+          item.cantidad_personas
+        ]
+      );
+
+      if (updateResult.affectedRows === 0) {
+        console.error("❌ No hay cupos suficientes para id_fecha:", item.id_fecha);
+        continue;
+      }
+
+      // 2️⃣ Cerrar fecha si se quedó sin cupos
+      await pool.promise().query(
+        `UPDATE fechasExcursion
+         SET estado = 'cerrada'
+         WHERE id_fecha = ?
+         AND cupo_disponible = 0`,
+        [item.id_fecha]
+      );
+
+      // 3️⃣ Crear reserva confirmada
       await pool.promise().query(
         `INSERT INTO Reservas
          (id_fecha, id_turista, cantidad_personas, monto_total, estado_reserva)
-         VALUES (?, ?, ?, ?, 'pendiente')`,
+         VALUES (?, ?, ?, ?, 'confirmada')`,
         [
           item.id_fecha,
           id_turista,
@@ -581,7 +610,7 @@ export const webhookMercadoPago = async (req, res) => {
       [id_carrito]
     );
 
-    // 🧹 Eliminar items (baja lógica)
+    // 🧹 Baja lógica items
     await pool.promise().query(
       `UPDATE CarritoItems
        SET eliminado = 1,
@@ -590,7 +619,7 @@ export const webhookMercadoPago = async (req, res) => {
       [id_carrito]
     );
 
-    console.log("✅ Reservas creadas correctamente para carrito:", id_carrito);
+    console.log("✅ Reservas creadas y cupos descontados para carrito:", id_carrito);
 
     return res.sendStatus(200);
 
