@@ -446,7 +446,7 @@ export const crearPago = async (req, res) => {
 
     const id_carrito = carritoRows[0].id_carrito;
 
-    // 🧾 2️⃣ CREAR PREFERENCE DE MERCADOPAGO
+    // 2️⃣ CREAR PREFERENCE DE MERCADOPAGO
     const preference = {
       items: items.map((item) => ({
         title: item.nombre,
@@ -457,7 +457,7 @@ export const crearPago = async (req, res) => {
 
       back_urls: {
         success:
-          "https://epizootically-semitropical-jannie.ngrok-free.dev/pago-exitoso",
+          "https://epizootically-semitropical-jannie.ngrok-free.dev/pago-exitoso", // URL de éxito (frontend)
         failure:
           "https://epizootically-semitropical-jannie.ngrok-free.dev/pago-fallido",
         pending:
@@ -469,16 +469,16 @@ export const crearPago = async (req, res) => {
       notification_url:
         "https://epizootically-semitropical-jannie.ngrok-free.dev/api/pagos/webhook/mercadopago",
 
-      // 🔑 3️⃣ METADATA CLAVE PARA EL WEBHOOK
+      // 3️⃣ METADATA CLAVE PARA EL WEBHOOK
       metadata: {
-        id_turista,
-        reservas,
+        //id_turista,
+        //reservas,
         id_carrito,
       },
     };
 
     console.log(
-      "🧪 Preference enviada a MP:",
+      " Preference enviada a MP:",
       JSON.stringify(preference, null, 2),
     );
 
@@ -504,59 +504,105 @@ export const crearPago = async (req, res) => {
 
 export const webhookMercadoPago = async (req, res) => {
   try {
-    const paymentId = req.body?.data?.id;
+    console.log("📩 Webhook recibido:", JSON.stringify(req.body));
 
-    // MP siempre espera 200
+    const paymentId = req.body?.data?.id;
     if (!paymentId) return res.sendStatus(200);
 
-    //  Obtener pago real
     const payment = await paymentClient.get({ id: paymentId });
+
+    console.log("💳 Estado del pago:", payment.status);
 
     if (payment.status !== "approved") {
       return res.sendStatus(200);
     }
 
-    //  Metadata
-    const { id_turista, reservas, id_carrito } = payment.metadata || {};
+    const { id_carrito } = payment.metadata || {};
 
     if (!id_carrito) {
-      console.warn("⚠️ Pago aprobado sin id_carrito");
+      console.error("❌ No llegó id_carrito en metadata");
       return res.sendStatus(200);
     }
 
-    //  Confirmar carrito
-    await pool.promise().query(
-      `
-      UPDATE Carrito
-      SET estado = 'confirmado'
-      WHERE id_carrito = ?
-        AND estado = 'abierto'
-        AND eliminado = 0
-      `,
+    // 🔒 Verificar si ya fue procesado
+    const [carritoEstado] = await pool.promise().query(
+      `SELECT estado, id_turista FROM Carrito WHERE id_carrito = ?`,
       [id_carrito]
     );
 
-    //  Marcar reservas como pagadas
-    if (Array.isArray(reservas) && reservas.length > 0) {
+    if (carritoEstado.length === 0) {
+      console.error("❌ Carrito no encontrado");
+      return res.sendStatus(200);
+    }
+
+    if (carritoEstado[0].estado === "cerrado") {
+      console.log("⚠️ Carrito ya procesado");
+      return res.sendStatus(200);
+    }
+
+    const id_turista = carritoEstado[0].id_turista;
+
+    // 🛒 Obtener items reales del carrito
+    const [items] = await pool.promise().query(
+      `SELECT *
+       FROM CarritoItems
+       WHERE id_carrito = ?
+       AND eliminado = 0`,
+      [id_carrito]
+    );
+
+    if (items.length === 0) {
+      console.error("❌ Carrito sin items");
+      return res.sendStatus(200);
+    }
+
+    console.log("🛒 Items encontrados:", items.length);
+
+    // 🔁 Procesar cada item
+    for (const item of items) {
+
+      // 1️⃣ Descontar cupos correctamente
+      const [updateResult] = await pool.promise().query(
+        `UPDATE fechasExcursion
+         SET cupo_disponible = cupo_disponible - ?
+         WHERE id_fecha = ?
+         AND cupo_disponible >= ?`,
+        [
+          item.cantidad_personas,
+          item.id_fecha,
+          item.cantidad_personas
+        ]
+      );
+
+      if (updateResult.affectedRows === 0) {
+        console.error("❌ No hay cupos suficientes para id_fecha:", item.id_fecha);
+        continue;
+      }
+
+      // 2️⃣ Cerrar fecha si se quedó sin cupos
       await pool.promise().query(
-        `
-        UPDATE Pagos
-        SET estado_pago = 'aprobado'
-        WHERE id_pago = ?
-        `,
-        [reservas]
+        `UPDATE fechasExcursion
+         SET estado = 'cerrada'
+         WHERE id_fecha = ?
+         AND cupo_disponible = 0`,
+        [item.id_fecha]
+      );
+
+      // 3️⃣ Crear reserva confirmada
+      await pool.promise().query(
+        `INSERT INTO Reservas
+         (id_fecha, id_turista, cantidad_personas, monto_total, estado_reserva)
+         VALUES (?, ?, ?, ?, 'confirmada')`,
+        [
+          item.id_fecha,
+          id_turista,
+          item.cantidad_personas,
+          item.subtotal
+        ]
       );
     }
 
-    //  Vaciar carrito (baja lógica de items)
-    await pool.promise().query(
-      `UPDATE CarritoItems
-       SET eliminado = 1, fecha_eliminacion = NOW()
-       WHERE id_carrito = ?`,
-      [id_carrito]
-    );
-
-    //  Opcional: cerrar carrito
+    // 🔐 Cerrar carrito
     await pool.promise().query(
       `UPDATE Carrito
        SET estado = 'cerrado'
@@ -564,11 +610,21 @@ export const webhookMercadoPago = async (req, res) => {
       [id_carrito]
     );
 
-    console.log("Pago aprobado. Carrito confirmado:", id_carrito);
+    // 🧹 Baja lógica items
+    await pool.promise().query(
+      `UPDATE CarritoItems
+       SET eliminado = 1,
+           fecha_eliminacion = NOW()
+       WHERE id_carrito = ?`,
+      [id_carrito]
+    );
+
+    console.log("✅ Reservas creadas y cupos descontados para carrito:", id_carrito);
 
     return res.sendStatus(200);
+
   } catch (error) {
-    console.error("Error webhook MercadoPago:", error);
+    console.error("🔥 ERROR REAL webhook MercadoPago:", error);
     return res.sendStatus(200);
   }
 };

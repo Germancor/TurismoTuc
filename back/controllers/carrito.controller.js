@@ -350,51 +350,55 @@ export const updateCantidadItem = async (req, res) => {
 };
 
 //  Vaciar carrito luego de pagar
-// export const vaciarCarrito = async (req, res) => {
+export const vaciarCarrito = async (req, res) => {
+  const { id_turista } = req.params;
 
-//   const { id_turista } = req.params;
+  try {
+    const [carritoRows] = await pool.promise().query(
+      `
+      SELECT id_carrito
+      FROM Carrito
+      WHERE id_turista = ?
+        AND estado = 'abierto'
+        AND eliminado = 0
+      ORDER BY id_carrito DESC
+      LIMIT 1
+      `,
+      [id_turista]
+    );
 
-//   try {
-//     // 1️⃣ Obtener carrito abierto del turista
-//     const [carritoRows] = await pool.promise().query(
-//       `
-//       SELECT id_carrito
-//       FROM Carrito
-//       WHERE id_turista = ? AND estado = 'abierto' AND eliminado = 0
-//       ORDER BY id_carrito DESC
-//       LIMIT 1
-//       `,
-//       [id_turista]
-//     );
+    if (carritoRows.length === 0) {
+      return res.status(404).json({ message: "No hay carrito abierto para vaciar." });
+    }
 
-//     if (carritoRows.length === 0) {
-//       return res.status(404).json({ message: "No hay carrito abierto para vaciar." });
-//     }
+    const id_carrito = carritoRows[0].id_carrito;
 
-//     const id_carrito = carritoRows[0].id_carrito;
+    // baja lógica items
+    await pool.promise().query(
+      `
+      UPDATE CarritoItems
+      SET eliminado = 1, fecha_eliminacion = NOW()
+      WHERE id_carrito = ? AND eliminado = 0
+      `,
+      [id_carrito]
+    );
 
-//     // 2️⃣ Eliminar ítems correctamente (nombre correcto de la tabla)
-//     await pool.promise().query(
-//       `DELETE FROM CarritoItems WHERE id_carrito = ?`,
-//       [id_carrito]
-//     );
+    // cerrar carrito (elegí el estado que uses)
+    await pool.promise().query(
+      `
+      UPDATE Carrito
+      SET estado = 'confirmado'
+      WHERE id_carrito = ? AND estado = 'abierto' AND eliminado = 0
+      `,
+      [id_carrito]
+    );
 
-//     // 3️⃣ Marcar carrito como cerrado
-//     await pool.promise().query(
-//       `UPDATE Carrito SET estado = 'cerrado' WHERE id_carrito = ?`,
-//       [id_carrito]
-//     );
-
-//     res.json({
-//       message: "🧹 Carrito vaciado y cerrado correctamente.",
-//       id_carrito,
-//     });
-
-//   } catch (err) {
-//     console.error("❌ Error al vaciar carrito:", err);
-//     res.status(500).json({ message: "Error al vaciar carrito." });
-//   }
-// };
+    return res.json({ ok: true, message: "Carrito vaciado", id_carrito });
+  } catch (err) {
+    console.error("❌ Error al vaciar carrito:", err);
+    return res.status(500).json({ message: "Error al vaciar carrito." });
+  }
+};
 
 // =============================
 // CERRAR / CONFIRMAR CARRITO (uso interno - webhook)

@@ -6,6 +6,7 @@ import {
   addItemCarrito,
   getItemsCarrito,
   deleteItemCarrito,
+  vaciarCarrito,
   updateCantidadItem
 } from "../controllers/carrito.controller.js";
 
@@ -30,6 +31,6 @@ router.delete("/item/:id_item", deleteItemCarrito);
 // PUT    /api/carrito/item/15        -> actualizar cantidad item
 router.put("/item/:id_item", updateCantidadItem);
 // DELETE /api/carrito/vaciar/9      -> vaciar carrito del turista 9
-//router.delete("/vaciar/:id_turista", vaciarCarrito);
+router.delete("/vaciar/:id_turista", vaciarCarrito);
 
 export default router;

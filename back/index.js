@@ -24,6 +24,8 @@ import cloudinaryRoutes from './routes/cloudinary.routes.js';
 import excursionUploadRoutes from './routes/uploadExcursiones.routes.js';
 import resenasMultimediaRoutes from "./routes/reseniaMultimedia.routes.js";
 
+import comprobantesRoutes from "./routes/comprobantes.routes.js";
+
 const app = express();
 
 // Middlewares básicos
@@ -34,6 +36,8 @@ const allowedOrigins = [
   "http://localhost:5173",                    // desarrollo
   "https://altotucuman-turismo.vercel.app"    // producción
 ];
+
+
 
 app.use(
   cors({
@@ -62,9 +66,20 @@ app.use('/api', cloudinaryRoutes);
 app.use('/api', excursionUploadRoutes);
 app.use("/api", resenasMultimediaRoutes);
 
+
+app.use("/api/comprobantes", comprobantesRoutes);
+
+// para poder acceder al archivo luego
+app.use("/uploads", express.static("uploads"));
+
 // Endpoint raíz
 app.get("/", (req, res) => {
   res.send("API MAAVYT 🚀🏞");
+});
+
+// Redirecciones post-pago (Mercado Pago)
+app.get("/pago-exitoso", (req, res) => {
+  res.redirect("http://localhost:5173/perfil-turista");
 });
 
 // Levanta el servidor o escucha
