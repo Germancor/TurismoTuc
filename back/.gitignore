@@ -22,3 +22,5 @@ Thumbs.db
 
 # === Tests y coverage ===
 coverage/
+
+uploads/
