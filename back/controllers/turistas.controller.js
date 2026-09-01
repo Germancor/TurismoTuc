@@ -297,8 +297,8 @@ export const getReservasByTurista = async (req, res) => {
         r.estado_reserva, r.fecha_reserva,
         DATE_FORMAT(f.fecha, '%Y-%m-%d') AS fecha_salida, f.hora_salida
       FROM Reservas r
-      JOIN FechasExcursion f ON r.id_fecha = f.id_fecha
-      JOIN Excursiones e ON f.id_excursion = e.id_excursion
+      LEFT JOIN FechasExcursion f ON r.id_fecha = f.id_fecha
+      LEFT JOIN Excursiones e ON f.id_excursion = e.id_excursion
       LEFT JOIN Usuarios u ON e.id_guia = u.id_usuario
       ${baseWhere}
       ${orderClause}

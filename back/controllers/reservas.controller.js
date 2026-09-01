@@ -131,7 +131,7 @@ export const getReservaById = (req, res) => {
     JOIN Turistas t ON r.id_turista = t.id_turista
     JOIN FechasExcursion f ON r.id_fecha = f.id_fecha
     JOIN Excursiones e ON f.id_excursion = e.id_excursion
-    WHERE r.id_reserva = ? AND r.eliminado = 0
+    WHERE r.id_reserva = ?
   `;
 
   pool.query(sql, [id], (err, results) => {

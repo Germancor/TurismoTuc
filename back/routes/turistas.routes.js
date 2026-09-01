@@ -19,7 +19,7 @@ const router = express.Router();
 router.get("/", getTuristas);
 router.get("/buscar", buscarTuristaPorDNI);
 router.get("/exacto", buscarTuristaExactoPorDNI);
-router.get("/:id/reservas", getReservasByTurista); // 👈 debe ir antes de /:id
+router.get("/:id/reservas", getReservasByTurista);
 router.get("/:id", getTuristaById);
 router.post("/", createTurista);
 router.put("/:id", updateTurista);

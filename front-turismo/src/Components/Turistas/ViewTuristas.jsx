@@ -16,10 +16,10 @@ export default function ViewTurista() {
       try {
         const [turistaRes, reservasRes] = await Promise.all([
           axios.get(`${import.meta.env.VITE_API_URL}/turistas/${id}`),
-          axios.get(`${import.meta.env.VITE_API_URL}/turistas/${id}/reservas`),
+          axios.get(`${import.meta.env.VITE_API_URL}/turistas/${id}/reservas?historial=true`),
         ]);
         setTurista(turistaRes.data);
-        setReservas(reservasRes.data);
+        setReservas(reservasRes.data.reservas);
       } catch (err) {
         console.error("Error al obtener datos:", err);
         Swal.fire("Error", "No se pudo cargar la información del turista.", "error");

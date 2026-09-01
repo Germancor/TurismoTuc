@@ -574,7 +574,7 @@ export const webhookMercadoPago = async (req, res) => {
 
         await connection.query(
           `INSERT INTO Reservas (id_fecha, id_turista, cantidad_personas, monto_total, estado_reserva)
-           VALUES (?, ?, ?, ?, 'pendiente')`,
+           VALUES (?, ?, ?, ?, 'confirmada')`,
           [item.id_fecha, id_turista, item.cantidad_personas, item.subtotal]
         );
 
