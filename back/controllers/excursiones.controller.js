@@ -366,7 +366,7 @@ export const getFechasByExcursion = (req, res) => {
     FROM FechasExcursion
     WHERE id_excursion = ? 
       AND eliminado = 0
-      AND cupo_disponible > 0   -- 👈 solo fechas con lugares
+      AND cupo_disponible > 0 
     ORDER BY fecha ASC
   `;
 

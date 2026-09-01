@@ -474,8 +474,6 @@ export const crearPago = async (req, res) => {
           "https://epizootically-semitropical-jannie.ngrok-free.dev/pago-pendiente",
       },
 
-      auto_return: "all",
-
       notification_url:
         "https://epizootically-semitropical-jannie.ngrok-free.dev/api/pagos/webhook/mercadopago",
 

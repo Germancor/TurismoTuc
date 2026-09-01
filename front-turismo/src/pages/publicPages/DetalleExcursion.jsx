@@ -17,7 +17,7 @@ import "../../styles/publicComponents/detalleex.css";
 export default function DetalleExcursion() {
   const { id } = useParams();
   const [excursion, setExcursion] = useState(null);
-  const [fechas, setFechas] = useState([]); // 👈 nuevo estado
+  const [fechas, setFechas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { turista } = useTuristaStore();
@@ -34,7 +34,7 @@ export default function DetalleExcursion() {
         const resImgs = await axios.get(`${import.meta.env.VITE_API_URL}/excursiones/${id}/multimedia`);
         excursionData.imagenes = resImgs.data || [];
 
-        // Fechas disponibles 👇
+        // Fechas disponibles
         const resFechas = await axios.get(`${import.meta.env.VITE_API_URL}/excursiones/${id}/fechas`);
         setFechas(resFechas.data || []);
 
@@ -90,7 +90,7 @@ export default function DetalleExcursion() {
           </Col>
 
           <Col xs={12} md={4} lg={3}>
-            {/* 👇 ahora le pasamos las fechas también */}
+            {/*  ahora le pasamos las fechas también */}
             <ExcursionSidebar excursion={excursion} fechas={fechas} turista={turista} />
           </Col>
         </Row>

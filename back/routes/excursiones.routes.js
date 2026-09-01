@@ -24,7 +24,7 @@ router.post("/notificar/:id_excursion", notificarGuia);
 // =============================
 router.get("/fechas-paginadas", getTodasLasFechasPaginadas); // Paginador de tabla plana
 router.get("/fechas/:id", getFechaById); 
-router.post("/fechas-excursion", createFechaExcursion);    // <--- ESTA ES LA QUE TE FALLABA
+router.post("/fechas-excursion", createFechaExcursion);  
 router.put("/fechas/restore/:id", restoreFechaExcursion);
 router.put("/fechas/:id", updateFechaExcursion);
 router.delete("/fechas/:id", deleteFechaExcursion);
@@ -36,7 +36,7 @@ router.get("/fecha/:id_fecha", async (req, res) => { /* ... tu lógica inline ..
 // =============================
 router.get("/", getExcursiones);
 router.post("/", createExcursion);
-router.put("/restore/:id", restoreExcursion); // Mover restaurar aquí
+router.put("/restore/:id", restoreExcursion); 
 router.put("/:id", updateExcursion);
 router.delete("/:id", deleteExcursion);
 router.get("/:id", getExcursionById);
