@@ -464,6 +464,7 @@ export const crearPago = async (req, res) => {
         unit_price: Number(item.precio),
         currency_id: "ARS",
       })),
+      external_reference: String(id_carrito),
 
       back_urls: {
         success:
@@ -490,14 +491,19 @@ export const crearPago = async (req, res) => {
       JSON.stringify(preference, null, 2),
     );
 
-    const response = await preferenceClient.create({
-      body: preference,
-    });
+    console.log(" ENVIANDO PREFERENCIA A MERCADO PAGO:");
+console.log(JSON.stringify(preference, null, 2));
 
+const response = await preferenceClient.create({
+  body: preference,
+});
+
+console.log(" RESPUESTA DE MERCADO PAGO:");
+console.log(JSON.stringify(response, null, 2));
     const initPoint = response.init_point;
 
     if (!initPoint) {
-      console.error("❌ init_point no encontrado", response);
+      console.error(" init_point no encontrado", response);
       return res.status(500).json({
         message: "No se pudo obtener init_point",
       });
@@ -505,18 +511,24 @@ export const crearPago = async (req, res) => {
 
     res.json({ init_point: initPoint });
   } catch (error) {
-    console.error("❌ Error creando pago:", error);
+    console.error(" Error creando pago:", error);
     res.status(500).json({ message: error.message });
   }
 };
 
 export const webhookMercadoPago = async (req, res) => {
   try {
-    console.log("📩 Webhook recibido:", JSON.stringify(req.body));
+    console.log("====================================");
+    console.log("📩 WEBHOOK MERCADO PAGO");
+    console.log("📩 Headers:", req.headers);
+    console.log("📩 Body:", req.body);
+    console.log("====================================");
 
     const paymentId = req.body?.data?.id;
-    if (!paymentId) return res.sendStatus(200);
-
+    if (!paymentId) {
+      console.log("Webhook sin paymentId");
+      return res.sendStatus(200);
+    }
     const payment = await paymentClient.get({ id: paymentId });
     console.log("💳 Estado del pago:", payment.status);
 
@@ -526,7 +538,7 @@ export const webhookMercadoPago = async (req, res) => {
 
     const { id_carrito } = payment.metadata || {};
     if (!id_carrito) {
-      console.error("❌ No llegó id_carrito en metadata");
+      console.error(" No llegó id_carrito en metadata");
       return res.sendStatus(200);
     }
 
