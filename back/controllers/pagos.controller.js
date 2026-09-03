@@ -631,3 +631,327 @@ export const webhookMercadoPago = async (req, res) => {
     return res.sendStatus(200);
   }
 };
+
+
+// export const webhookMercadoPago = async (req, res) => {
+//   try {
+//     console.log("====================================");
+//     console.log(" WEBHOOK MERCADO PAGO");
+//     console.log(" Body:", req.body);
+//     console.log("====================================");
+
+//     const { type, topic, data, resource } = req.body || {};
+
+//     let paymentId = null;
+//     let idCarrito = null;
+
+//     // ============================================================
+//     // 1 NOTIFICACIÓN DIRECTA DE PAYMENT
+//     // ============================================================
+//     if (type === "payment" && data?.id) {
+//       paymentId = data.id;
+
+//       console.log(" Notificación payment:", paymentId);
+//     }
+
+//     // ============================================================
+//     // 2 NOTIFICACIÓN DE MERCHANT ORDER
+//     // ============================================================
+//     else if (topic === "merchant_order" && resource) {
+//       console.log(" Notificación merchant_order");
+//       console.log(" Resource:", resource);
+
+//       const merchantOrderId = resource.split("/").pop();
+
+//       console.log(" Merchant Order ID:", merchantOrderId);
+
+//       // Consultar la merchant order
+//       const merchantOrderResponse = await fetch(resource, {
+//         headers: {
+//           Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN}`,
+//         },
+//       });
+
+//       if (!merchantOrderResponse.ok) {
+//         console.error(
+//           " Error consultando merchant_order:",
+//           merchantOrderResponse.status
+//         );
+
+//         return res.sendStatus(200);
+//       }
+
+//       const merchantOrder = await merchantOrderResponse.json();
+
+//       console.log(
+//         "Merchant Order:",
+//         JSON.stringify(merchantOrder, null, 2)
+//       );
+
+//       // Buscar un pago dentro de la orden
+//       if (merchantOrder.payments?.length > 0) {
+//         const approvedPayment = merchantOrder.payments.find(
+//           (p) => p.status === "approved"
+//         );
+
+//         if (approvedPayment) {
+//           paymentId = approvedPayment.id;
+
+//           console.log(" Pago aprobado encontrado:", paymentId);
+//         } else {
+//           console.log(" Todavía no hay pago aprobado");
+//           return res.sendStatus(200);
+//         }
+//       } else {
+//         console.log(" La orden todavía no tiene pagos");
+//         return res.sendStatus(200);
+//       }
+
+//       // external_reference contiene el id_carrito
+//       if (merchantOrder.external_reference) {
+//         idCarrito = Number(merchantOrder.external_reference);
+
+//         console.log(" id_carrito desde external_reference:", idCarrito);
+//       }
+//     }
+
+//     // ============================================================
+//     // 3 SI NO PUDIMOS OBTENER PAYMENT ID
+//     // ============================================================
+//     if (!paymentId) {
+//       console.log(" Webhook sin paymentId");
+//       return res.sendStatus(200);
+//     }
+
+//     // ============================================================
+//     // 4 CONSULTAR EL PAYMENT
+//     // ============================================================
+//     const payment = await paymentClient.get({
+//       id: paymentId,
+//     });
+
+//     console.log(" Información del pago:");
+//     console.log(JSON.stringify(payment, null, 2));
+
+//     // ============================================================
+//     // 5️ VERIFICAR QUE ESTÉ APROBADO
+//     // ============================================================
+//     if (payment.status !== "approved") {
+//       console.log(
+//         " Pago todavía no aprobado:",
+//         payment.status
+//       );
+
+//       return res.sendStatus(200);
+//     }
+
+//     console.log(" PAGO APROBADO");
+
+//     // ============================================================
+//     // 6 OBTENER id_carrito
+//     // ============================================================
+
+//     if (!idCarrito) {
+//       idCarrito =
+//         payment.external_reference ||
+//         payment.metadata?.id_carrito;
+//     }
+
+//     idCarrito = Number(idCarrito);
+
+//     if (!idCarrito) {
+//       console.error(" No se pudo obtener id_carrito");
+//       return res.sendStatus(200);
+//     }
+
+//     console.log(" Procesando carrito:", idCarrito);
+
+//     // ============================================================
+//     // 7 TRANSACCIÓN MYSQL
+//     // ============================================================
+
+//     const connection = await pool.promise().getConnection();
+
+//     await connection.beginTransaction();
+
+//     try {
+//       // ----------------------------------------------------------
+//       // Buscar carrito
+//       // ----------------------------------------------------------
+
+//       const [carritoEstado] = await connection.query(
+//         `
+//         SELECT estado, id_turista
+//         FROM Carrito
+//         WHERE id_carrito = ?
+//         FOR UPDATE
+//         `,
+//         [idCarrito]
+//       );
+
+//       if (carritoEstado.length === 0) {
+//         console.error(" Carrito no encontrado:", idCarrito);
+
+//         await connection.rollback();
+//         connection.release();
+
+//         return res.sendStatus(200);
+//       }
+
+//       // ----------------------------------------------------------
+//       // Evitar procesar dos veces
+//       // ----------------------------------------------------------
+
+//       if (carritoEstado[0].estado === "cerrado") {
+//         console.log(
+//           " Carrito ya procesado. Ignorando webhook duplicado."
+//         );
+
+//         await connection.commit();
+//         connection.release();
+
+//         return res.sendStatus(200);
+//       }
+
+//       const idTurista = carritoEstado[0].id_turista;
+
+//       // ----------------------------------------------------------
+//       // Obtener items
+//       // ----------------------------------------------------------
+
+//       const [items] = await connection.query(
+//         `
+//         SELECT *
+//         FROM CarritoItems
+//         WHERE id_carrito = ?
+//           AND eliminado = 0
+//         `,
+//         [idCarrito]
+//       );
+
+//       if (items.length === 0) {
+//         console.log(" Carrito sin items");
+
+//         await connection.commit();
+//         connection.release();
+
+//         return res.sendStatus(200);
+//       }
+
+//       console.log(
+//         ` Items encontrados: ${items.length}`
+//       );
+
+//       // ----------------------------------------------------------
+//       // Crear reservas
+//       // ----------------------------------------------------------
+
+//       for (const item of items) {
+//         console.log(
+//           " Creando reserva para fecha:",
+//           item.id_fecha
+//         );
+
+//         await connection.query(
+//           `
+//           INSERT INTO Reservas
+//           (
+//             id_fecha,
+//             id_turista,
+//             cantidad_personas,
+//             monto_total,
+//             estado_reserva
+//           )
+//           VALUES (?, ?, ?, ?, 'confirmada')
+//           `,
+//           [
+//             item.id_fecha,
+//             idTurista,
+//             item.cantidad_personas,
+//             item.subtotal,
+//           ]
+//         );
+
+//         // --------------------------------------------------------
+//         // Descontar cupos
+//         // --------------------------------------------------------
+
+//         await connection.query(
+//           `
+//           UPDATE FechasExcursion
+//           SET cupo_disponible = cupo_disponible - ?
+//           WHERE id_fecha = ?
+//           `,
+//           [
+//             item.cantidad_personas,
+//             item.id_fecha,
+//           ]
+//         );
+//       }
+
+//       // ----------------------------------------------------------
+//       // Cerrar carrito
+//       // ----------------------------------------------------------
+
+//       await connection.query(
+//         `
+//         UPDATE Carrito
+//         SET estado = 'cerrado'
+//         WHERE id_carrito = ?
+//         `,
+//         [idCarrito]
+//       );
+
+//       // ----------------------------------------------------------
+//       // Eliminar lógicamente items
+//       // ----------------------------------------------------------
+
+//       await connection.query(
+//         `
+//         UPDATE CarritoItems
+//         SET
+//           eliminado = 1,
+//           fecha_eliminacion = NOW()
+//         WHERE id_carrito = ?
+//         `,
+//         [idCarrito]
+//       );
+
+//       // ----------------------------------------------------------
+//       // Confirmar
+//       // ----------------------------------------------------------
+
+//       await connection.commit();
+
+//       connection.release();
+
+//       console.log("====================================");
+//       console.log(" PAGO PROCESADO CORRECTAMENTE");
+//       console.log(" Carrito:", idCarrito);
+//       console.log(" Turista:", idTurista);
+//       console.log(" Reservas creadas:", items.length);
+//       console.log("====================================");
+
+//       return res.sendStatus(200);
+
+//     } catch (dbError) {
+//       await connection.rollback();
+//       connection.release();
+
+//       console.error(
+//         " Error DB. Se hizo rollback:",
+//         dbError
+//       );
+
+//       return res.sendStatus(200);
+//     }
+
+//   } catch (error) {
+//     console.error(
+//       " ERROR REAL WEBHOOK MERCADO PAGO:",
+//       error
+//     );
+
+//     return res.sendStatus(200);
+//   }
+// };

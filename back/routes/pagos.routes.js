@@ -8,11 +8,11 @@ router.post("/crear-pago", crearPago);
 router.post("/webhook/mercadopago", webhookMercadoPago);
 
 
-// 🟢 Simulación Payway
+// Simulación Payway
 router.post("/payway/iniciar", iniciarPagoPayway);
 router.post("/payway/callback", callbackPayway);
 
-// 🟢 Transferencia bancaria
+// Transferencia bancaria
 router.post("/transferencia", registrarTransferencia);
 
 // GET todos los pagos
