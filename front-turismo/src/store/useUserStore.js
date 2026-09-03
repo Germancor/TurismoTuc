@@ -10,7 +10,7 @@ const useUserStore = create(
     }),
     {
       name: "user-storage", // Se guarda en localStorage
-      getStorage: () => localStorage, // 🔹 Asegura persistencia real
+      getStorage: () => localStorage, //  Asegura persistencia real
     }
   )
 );

@@ -36,12 +36,15 @@ const useCarritoStore = create((set, get) => ({
       // NUEVO: defender cuando no hay carrito o no tiene id_carrito
       if (!carrito || !carrito.id_carrito) {
         console.warn(
-          "⚠️ No se encontró carrito para este turista. Usando carrito vacío.",
+          " No se encontró carrito para este turista. Usando carrito vacío.",
         );
         set({ carrito: null, items: [] });
         localStorage.removeItem("carrito");
         localStorage.removeItem("items_carrito");
-        return;
+        return {
+          carrito: null,
+          items: [],
+        };
       }
 
       const resItems = await axios.get(
@@ -51,6 +54,10 @@ const useCarritoStore = create((set, get) => ({
       const data = resItems.data || [];
       set({ carrito, items: data });
 
+      return {
+        carrito,
+        items: data,
+      };
       // 💾 Guardar en localStorage
       // localStorage.setItem("carrito", JSON.stringify(carrito));
       // localStorage.setItem("items_carrito", JSON.stringify(data));
@@ -110,7 +117,9 @@ const useCarritoStore = create((set, get) => ({
   // =============================
   removeItem: async (id_item) => {
     try {
-      await axios.delete(`${import.meta.env.VITE_API_URL}/carrito/item/${id_item}`);
+      await axios.delete(
+        `${import.meta.env.VITE_API_URL}/carrito/item/${id_item}`,
+      );
       set((state) => ({
         items: state.items.filter((i) => i.id_item !== id_item),
       }));
