@@ -26,7 +26,7 @@ export default function Sidebar() {
     { to: "/dashboard-admin/fechas", label: "Fechas", icon: <FaUsers /> },
     { to: "/dashboard-admin/reservas", label: "Reservas", icon: <FaClipboardList /> },
 
-    // 💰 Nuevo enlace al CRUD de Pagos
+
     { to: "/dashboard-admin/pagos", label: "Pagos", icon: <FaMoneyBillWave /> },
     
     { to: "/dashboard-admin/multimedia", label: "Multimedia", icon: <FaImages /> },

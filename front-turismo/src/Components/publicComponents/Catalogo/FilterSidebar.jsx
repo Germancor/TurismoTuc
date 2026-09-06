@@ -5,7 +5,7 @@ import axios from "axios";
 
 export default function FilterSidebar({ onFilterChange }) {
   const { t } = useTranslation();
-  
+
   const [ubicacion, setUbicacion] = useState("");
   const [precioMin, setPrecioMin] = useState("");
   const [precioMax, setPrecioMax] = useState("");
@@ -13,57 +13,64 @@ export default function FilterSidebar({ onFilterChange }) {
   const [categoria, setCategoria] = useState("");
   const [categorias, setCategorias] = useState([]);
 
-  // Cargar categorías al montar
+  // Cargar categorías
   useEffect(() => {
     const fetchCategorias = async () => {
       try {
-        const res = await axios.get(`${import.meta.env.VITE_API_URL}/categorias`);
+        const res = await axios.get(
+          `${import.meta.env.VITE_API_URL}/categorias`
+        );
+
         setCategorias(res.data);
       } catch (err) {
         console.error("Error al obtener categorías:", err);
       }
     };
+
     fetchCategorias();
   }, []);
 
-  const handleApplyFilters = async (e) => {
+  const handleApplyFilters = (e) => {
     e.preventDefault();
 
-    const params = {};
-    if (ubicacion) params.ubicacion = ubicacion;
-    if (precioMin) params.precio_min = precioMin;
-    if (precioMax) params.precio_max = precioMax;
-    if (duracion) params.duracion = duracion;
-    if (categoria) params.categoria = categoria;
+    const filtros = {};
 
-    try {
-      const res = await axios.get(`${import.meta.env.VITE_API_URL}/excursiones`, { params });
-      onFilterChange(res.data.data || []);
-    } catch (err) {
-      console.error("Error al aplicar filtros:", err);
-    }
+    if (ubicacion) filtros.ubicacion = ubicacion;
+    if (precioMin) filtros.precio_min = precioMin;
+    if (precioMax) filtros.precio_max = precioMax;
+    if (duracion) filtros.duracion = duracion;
+    if (categoria) filtros.categoria = categoria;
+
+    // Mandamos los filtros al padre
+    onFilterChange(filtros);
   };
 
-  const handleClear = async () => {
+  const handleClear = () => {
     setUbicacion("");
     setPrecioMin("");
     setPrecioMax("");
     setDuracion("");
     setCategoria("");
-    try {
-      const res = await axios.get(`${import.meta.env.VITE_API_URL}/excursiones`);
-      onFilterChange(res.data.data || []);
-    } catch (err) {
-      console.error("Error al limpiar filtros:", err);
-    }
+
+    // Avisamos al padre que se limpiaron los filtros
+    onFilterChange({});
   };
 
   return (
     <div className="filter-sidebar bg-white rounded shadow-sm p-3 mb-3">
-      <h6 className="fw-bold mb-3">{t("filterSidebar.filter")}</h6>
+
+      <h6 className="fw-bold mb-3">
+        {t("filterSidebar.filter")}
+      </h6>
+
       <Form onSubmit={handleApplyFilters}>
+
+        {/* UBICACIÓN */}
         <Form.Group className="mb-3">
-          <Form.Label>{t("filterSidebar.location")}</Form.Label>
+          <Form.Label>
+            {t("filterSidebar.location")}
+          </Form.Label>
+
           <Form.Control
             type="text"
             placeholder={t("filterSidebar.locationPlaceholder")}
@@ -72,8 +79,12 @@ export default function FilterSidebar({ onFilterChange }) {
           />
         </Form.Group>
 
+        {/* PRECIO MÍNIMO */}
         <Form.Group className="mb-3">
-          <Form.Label>{t("filterSidebar.minPrice")}</Form.Label>
+          <Form.Label>
+            {t("filterSidebar.minPrice")}
+          </Form.Label>
+
           <Form.Control
             type="number"
             placeholder={t("filterSidebar.from")}
@@ -82,8 +93,12 @@ export default function FilterSidebar({ onFilterChange }) {
           />
         </Form.Group>
 
+        {/* PRECIO MÁXIMO */}
         <Form.Group className="mb-3">
-          <Form.Label>{t("filterSidebar.maxPrice")}</Form.Label>
+          <Form.Label>
+            {t("filterSidebar.maxPrice")}
+          </Form.Label>
+
           <Form.Control
             type="number"
             placeholder={t("filterSidebar.to")}
@@ -92,8 +107,12 @@ export default function FilterSidebar({ onFilterChange }) {
           />
         </Form.Group>
 
+        {/* DURACIÓN */}
         <Form.Group className="mb-3">
-          <Form.Label>{t("filterSidebar.duration")}</Form.Label>
+          <Form.Label>
+            {t("filterSidebar.duration")}
+          </Form.Label>
+
           <Form.Control
             type="text"
             placeholder={t("filterSidebar.durationPlaceholder")}
@@ -102,13 +121,20 @@ export default function FilterSidebar({ onFilterChange }) {
           />
         </Form.Group>
 
+        {/* CATEGORÍA */}
         <Form.Group className="mb-3">
-          <Form.Label>{t("filterSidebar.category")}</Form.Label>
+          <Form.Label>
+            {t("filterSidebar.category")}
+          </Form.Label>
+
           <Form.Select
             value={categoria}
             onChange={(e) => setCategoria(e.target.value)}
           >
-            <option value="">{t("filterSidebar.all")}</option>
+            <option value="">
+              {t("filterSidebar.all")}
+            </option>
+
             {categorias.map((cat) => (
               <option
                 key={cat.id_categoria_excursion}
@@ -120,18 +146,28 @@ export default function FilterSidebar({ onFilterChange }) {
           </Form.Select>
         </Form.Group>
 
+        {/* BOTONES */}
         <div className="d-flex gap-2">
-          <Button type="submit" variant="teal" className="w-50">
+
+          <Button
+            type="submit"
+            variant="teal"
+            className="w-50"
+          >
             {t("filterSidebar.apply")}
           </Button>
+
           <Button
+            type="button"
             variant="outline-secondary"
             className="w-50"
             onClick={handleClear}
           >
             {t("filterSidebar.clear")}
           </Button>
+
         </div>
+
       </Form>
     </div>
   );

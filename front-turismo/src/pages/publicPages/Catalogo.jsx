@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import axios from "axios";
 import { Container, Row, Col } from "react-bootstrap";
@@ -7,10 +7,10 @@ import { useTranslation } from "react-i18next";
 import CatalogGrid from "../../Components/publicComponents/Catalogo/CatalogGrid";
 import FilterSidebar from "../../Components/publicComponents/Catalogo/FilterSidebar";
 import SortBar from "../../Components/publicComponents/Catalogo/SortBar";
-import Paginacion from "../../Components/Filtros/Paginacion"; // ajustá la ruta si hace falta
+import Paginacion from "../../Components/Filtros/Paginacion";
+
 import "../../styles/publicComponents/catalogo.css";
 
-// Hook para leer parámetros de la URL
 function useQuery() {
   return new URLSearchParams(useLocation().search);
 }
@@ -24,123 +24,200 @@ export default function Catalogo() {
 
   // PAGINACIÓN
   const PAGE_SIZE = 8;
+
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+
+  // FILTROS
+  const [filtros, setFiltros] = useState({});
+
+  // ORDEN
+  const [orden, setOrden] = useState("");
 
   const query = useQuery();
   const categoriaSeleccionada = query.get("categoria");
 
-  const fetchExcursiones = async () => {
+  /**
+   * Obtener excursiones desde el backend
+   */
+  const fetchExcursiones = async (
+    page = 1,
+    filtrosActuales = filtros,
+    ordenActual = orden
+  ) => {
     try {
       setLoading(true);
-      let url = `${import.meta.env.VITE_API_URL}/excursiones`;
+      setError(null);
 
+      const params = {
+        page,
+        limit: PAGE_SIZE,
+        ...filtrosActuales,
+      };
+
+      // Categoría proveniente de la URL
       if (categoriaSeleccionada) {
-        url += `?categoria=${encodeURIComponent(categoriaSeleccionada)}`;
+        params.categoria = categoriaSeleccionada;
       }
 
-      const res = await axios.get(url);
+      // Ordenamiento
+      if (ordenActual) {
+        params.orden = ordenActual;
+      }
+
+      const res = await axios.get(
+        `${import.meta.env.VITE_API_URL}/excursiones`,
+        {
+          params,
+        }
+      );
+
       setExcursiones(res.data.data || []);
-      setCurrentPage(1); // reset al cambiar data
+
+      setTotalPages(
+        res.data.totalPages || 1
+      );
+
+      setCurrentPage(page);
+
     } catch (err) {
-      console.error("Error al obtener excursiones:", err);
-      setError("No se pudieron cargar las excursiones.");
+      console.error(
+        "Error al obtener excursiones:",
+        err
+      );
+
+      setError(
+        "No se pudieron cargar las excursiones."
+      );
+
     } finally {
       setLoading(false);
     }
   };
 
+  /**
+   * Primera carga
+   * y cambio de categoría desde la URL
+   */
   useEffect(() => {
-    fetchExcursiones();
+    setFiltros({});
+    setOrden("");
+    fetchExcursiones(1, {}, "");
   }, [categoriaSeleccionada]);
 
-  const handleFilterChange = (data) => {
-    if (data) {
-      setExcursiones(data);
-    } else {
-      fetchExcursiones();
-      return;
-    }
-    setCurrentPage(1);
+  /**
+   * Aplicar filtros
+   */
+  const handleFilterChange = (nuevosFiltros) => {
+    setFiltros(nuevosFiltros);
+
+    // Cuando cambia el filtro volvemos a página 1
+    fetchExcursiones(
+      1,
+      nuevosFiltros,
+      orden
+    );
   };
 
-  const handleSortChange = (order) => {
-    const sorted = [...excursiones];
+  /**
+   * Cambiar ordenamiento
+   */
+  const handleSortChange = (nuevoOrden) => {
+    setOrden(nuevoOrden);
 
-    switch (order) {
-      case "precio_asc":
-        sorted.sort((a, b) => a.precio_base - b.precio_base);
-        break;
-      case "precio_desc":
-        sorted.sort((a, b) => b.precio_base - a.precio_base);
-        break;
-      case "fecha_nueva":
-        sorted.sort(
-          (a, b) => new Date(b.fecha_creacion) - new Date(a.fecha_creacion)
-        );
-        break;
-      case "fecha_vieja":
-        sorted.sort(
-          (a, b) => new Date(a.fecha_creacion) - new Date(b.fecha_creacion)
-        );
-        break;
-      default:
-        return;
-    }
-
-    setExcursiones(sorted);
-    setCurrentPage(1);
+    // Cuando cambia el orden volvemos a página 1
+    fetchExcursiones(
+      1,
+      filtros,
+      nuevoOrden
+    );
   };
 
-  const totalPages = Math.ceil((excursiones.length || 0) / PAGE_SIZE);
-
-  const excursionesPaginadas = useMemo(() => {
-    const start = (currentPage - 1) * PAGE_SIZE;
-    return excursiones.slice(start, start + PAGE_SIZE);
-  }, [excursiones, currentPage]);
-
-  useEffect(() => {
-    if (totalPages <= 0) {
-      setCurrentPage(1);
-    } else if (currentPage > totalPages) {
-      setCurrentPage(totalPages);
-    }
-  }, [totalPages, currentPage]);
+  /**
+   * Cambiar página
+   */
+  const handlePageChange = (page) => {
+    fetchExcursiones(
+      page,
+      filtros,
+      orden
+    );
+  };
 
   return (
-    <Container fluid className="catalogo-page py-4">
+    <Container
+      fluid
+      className="catalogo-page py-4"
+    >
       <Row>
-        {/* Sidebar con ordenar + filtros */}
+
+        {/* SIDEBAR */}
         <Col md={3} lg={2}>
+
           <div className="sidebar-container">
+
             <h5 className="fw-bold mb-2 text-secondary">
               {t("filterSidebar.filter")}
             </h5>
-            <SortBar onSortChange={handleSortChange} />
-            <FilterSidebar onFilterChange={handleFilterChange} />
+
+            <SortBar
+              onSortChange={handleSortChange}
+            />
+
+            <FilterSidebar
+              onFilterChange={handleFilterChange}
+            />
+
           </div>
+
         </Col>
 
-        {/* Grilla principal */}
-        <Col xs={12} md={9} lg={10}>
+        {/* CATÁLOGO */}
+        <Col
+          xs={12}
+          md={9}
+          lg={10}
+        >
+
           {loading ? (
-            <p>{t("catalogo.loading")}</p>
+
+            <p>
+              {t("catalogo.loading")}
+            </p>
+
           ) : error ? (
-            <p className="text-danger">{error}</p>
+
+            <p className="text-danger">
+              {error}
+            </p>
+
           ) : excursiones.length === 0 ? (
-            <p className="text-muted">{t("catalogo.empty")}</p>
+
+            <p className="text-muted">
+              {t("catalogo.empty")}
+            </p>
+
           ) : (
+
             <>
-              <CatalogGrid excursiones={excursionesPaginadas} />
+
+              <CatalogGrid
+                excursiones={excursiones}
+              />
 
               <Paginacion
                 currentPage={currentPage}
                 totalPages={totalPages}
-                onPageChange={setCurrentPage}
+                onPageChange={handlePageChange}
                 maxVisible={5}
               />
+
             </>
+
           )}
+
         </Col>
+
       </Row>
     </Container>
   );
