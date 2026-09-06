@@ -5,7 +5,8 @@ import {
   notificarGuia, getMultimediaByExcursion, createMultimedia, deleteMultimedia,
   getFechasByExcursion, getExcursionesConFechas, getTodasLasFechasPaginadas,
   restoreFechaExcursion, createFechaExcursion, updateFechaExcursion, deleteFechaExcursion,
-  getGuias, getExcursionesPorGuia, getParticipantesByExcursion, getFechaById,
+  getGuias, getExcursionesPorGuia, getParticipantesByExcursion, getFechaById,getFechasByExcursionParaGuia,
+  getParticipantesByFechaParaGuia,
   updateCategoriasExcursionMultiple
 } from "../controllers/excursiones.controller.js";
 
@@ -39,8 +40,11 @@ router.post("/", createExcursion);
 router.put("/restore/:id", restoreExcursion); 
 router.put("/:id", updateExcursion);
 router.delete("/:id", deleteExcursion);
+router.get("/:id_excursion/fechas-guia",getFechasByExcursionParaGuia);
+router.get("/:id_excursion/fechas/:id_fecha/participantes-guia",getParticipantesByFechaParaGuia);
 router.get("/:id", getExcursionById);
 router.get("/guia/:id_guia", getExcursionesPorGuia);
+
 
 // =============================
 // 4. MULTIMEDIA

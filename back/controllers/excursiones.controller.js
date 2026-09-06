@@ -730,7 +730,7 @@ export const deleteMultimedia = (req, res) => {
 };
 
 // =============================
-// OTROS
+// GUIA
 // =============================
 export const getExcursionesPorGuia = async (req, res) => {
   const { id_guia } = req.params;
@@ -759,37 +759,150 @@ export const getExcursionesPorGuia = async (req, res) => {
   }
 };
 
+export const getFechasByExcursionParaGuia = async (req, res) => {
+  const { id_excursion } = req.params;
+
+  try {
+    const [rows] = await pool.promise().query(
+      `
+      SELECT
+        f.id_fecha,
+        f.id_excursion,
+        f.fecha,
+        f.hora_salida,
+        f.cupo_maximo,
+        f.cupo_disponible,
+        f.estado
+      FROM FechasExcursion f
+      JOIN Excursiones e
+        ON f.id_excursion = e.id_excursion
+      WHERE f.id_excursion = ?
+        AND f.eliminado = 0
+        AND e.eliminado = 0
+      ORDER BY f.fecha ASC, f.hora_salida ASC
+      `,
+      [id_excursion]
+    );
+
+    res.json(rows);
+  } catch (err) {
+    console.error(
+      "❌ Error al obtener fechas para el guía:",
+      err
+    );
+
+    res.status(500).json({
+      message: "Error interno al obtener las fechas de la excursión",
+    });
+  }
+};
+
+export const getParticipantesByFechaParaGuia = async (req, res) => {
+  const { id_excursion, id_fecha } = req.params;
+
+  try {
+    const [rows] = await pool.promise().query(
+      `
+      SELECT
+        t.id_turista,
+        t.nombre,
+        t.apellido,
+        t.dni,
+        t.email,
+
+        r.id_reserva,
+        r.cantidad_personas,
+        r.monto_total,
+        r.pago_recibido,
+        r.estado_reserva,
+
+        f.id_fecha,
+        DATE_FORMAT(f.fecha, '%Y-%m-%d') AS fecha_salida,
+        f.hora_salida
+
+      FROM Reservas r
+
+      JOIN Turistas t
+        ON r.id_turista = t.id_turista
+
+      JOIN FechasExcursion f
+        ON r.id_fecha = f.id_fecha
+
+      JOIN Excursiones e
+        ON f.id_excursion = e.id_excursion
+
+      WHERE f.id_excursion = ?
+        AND f.id_fecha = ?
+        AND r.eliminado = 0
+        AND f.eliminado = 0
+        AND e.eliminado = 0
+
+      ORDER BY t.apellido ASC, t.nombre ASC
+      `,
+      [id_excursion, id_fecha]
+    );
+
+    res.json(rows);
+  } catch (err) {
+    console.error(
+      "❌ Error al obtener participantes de la fecha:",
+      err
+    );
+
+    res.status(500).json({
+      message: "Error interno al obtener los participantes",
+    });
+  }
+};
+
 export const getParticipantesByExcursion = (req, res) => {
   const { id } = req.params;
 
   const sql = `
     SELECT 
-      t.id_usuario AS id_turista,
+      t.id_turista,
       t.nombre,
       t.apellido,
+      t.dni,
       t.email,
+
       r.id_reserva,
       r.cantidad_personas,
       r.estado_reserva,
+
+      f.id_fecha,
       DATE_FORMAT(f.fecha, '%Y-%m-%d') AS fecha_salida,
       f.hora_salida
+
     FROM Reservas r
-    JOIN Usuarios t ON r.id_turista = t.id_usuario
-    JOIN FechasExcursion f ON r.id_fecha = f.id_fecha
-    WHERE f.id_excursion = ? AND r.eliminado = 0
-    ORDER BY f.fecha ASC
+
+    JOIN Turistas t
+      ON r.id_turista = t.id_turista
+
+    JOIN FechasExcursion f
+      ON r.id_fecha = f.id_fecha
+
+    WHERE f.id_excursion = ?
+      AND r.eliminado = 0
+      AND f.eliminado = 0
+      AND t.eliminado = 0
+
+    ORDER BY f.fecha ASC, t.apellido ASC, t.nombre ASC
   `;
 
   pool.query(sql, [id], (err, results) => {
     if (err) {
-      console.error("Error al obtener participantes:", err.message);
-      return res
-        .status(500)
-        .json({
-          message: "Error al obtener participantes",
-          error: err.message,
-        });
+      console.error(
+        "❌ Error al obtener participantes:",
+        err.message
+      );
+
+      return res.status(500).json({
+        message: "Error al obtener participantes",
+        error: err.message,
+      });
     }
+
     res.json(results);
   });
 };
