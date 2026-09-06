@@ -423,19 +423,41 @@ export const getFechasByExcursion = (req, res) => {
   const { id_excursion } = req.params;
 
   const sql = `
-    SELECT id_fecha, fecha, hora_salida, cupo_maximo, cupo_disponible, estado
+    SELECT 
+      id_fecha,
+      fecha,
+      hora_salida,
+      cupo_maximo,
+      cupo_disponible,
+      estado
     FROM FechasExcursion
-    WHERE id_excursion = ? 
+    WHERE id_excursion = ?
       AND eliminado = 0
-      AND cupo_disponible > 0 
-    ORDER BY fecha ASC
+      AND estado = 'abierta'
+      AND cupo_disponible > 0
+      AND (
+        (
+          hora_salida IS NOT NULL
+          AND TIMESTAMP(fecha, hora_salida) > NOW()
+        )
+        OR
+        (
+          hora_salida IS NULL
+          AND fecha >= CURDATE()
+        )
+      )
+    ORDER BY fecha ASC, hora_salida ASC
   `;
 
   pool.query(sql, [id_excursion], (err, results) => {
     if (err) {
       console.error("Error al obtener fechas de excursión:", err);
-      return res.status(500).json({ message: "Error al obtener fechas" });
+
+      return res.status(500).json({
+        message: "Error al obtener fechas",
+      });
     }
+
     res.json(results);
   });
 };
