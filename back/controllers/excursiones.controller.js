@@ -101,6 +101,7 @@ export const getExcursiones = (req, res) => {
 
   pool.query(sqlCount, values, (err, countResult) => {
     if (err)
+      console.error("ERROR SQL COUNT EXCURSIONES:", err);
       return res.status(500).json({ message: "Error al contar excursiones" });
 
     const total = countResult[0].total;
