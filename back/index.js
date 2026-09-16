@@ -35,7 +35,7 @@ app.use(express.json());
 // CORS: permitir front local y el de Vercel
 const allowedOrigins = [
   "http://localhost:5173",                    // desarrollo
-  "https://altotucuman-turismo.vercel.app"    // producción
+  "https://turismo-maavyt.vercel.app"    // producción
 ];
 
 
