@@ -248,6 +248,7 @@ export const registrarTransferencia = async (req, res) => {
 // 🟢 Obtener todos los pagos (con info del turista y método)
 export const getPagos = async (req, res) => {
   const {
+    q,
     estado, // opcional: 'todos', 'aprobado', 'pendiente', 'rechazado'
     fechaDesde,
     fechaHasta,
@@ -271,6 +272,28 @@ export const getPagos = async (req, res) => {
   if (fechaHasta) {
     condiciones.push(`DATE(p.fecha_pago) <= ?`);
     params.push(fechaHasta);
+  }
+
+  if (q && q.trim() !== "") {
+    const searchVal = `%${q.trim()}%`;
+    condiciones.push(`(
+      t.nombre LIKE ? OR 
+      t.apellido LIKE ? OR 
+      CONCAT(t.nombre, ' ', t.apellido) LIKE ? OR
+      t.dni LIKE ? OR 
+      mp.nombre_medio LIKE ? OR 
+      p.referencia LIKE ? OR 
+      CAST(p.id_reserva AS CHAR) LIKE ?
+    )`);
+    params.push(
+      searchVal,
+      searchVal,
+      searchVal,
+      searchVal,
+      searchVal,
+      searchVal,
+      searchVal
+    );
   }
 
   const whereClause =
