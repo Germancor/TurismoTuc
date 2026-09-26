@@ -143,7 +143,7 @@ export default function MainFechasExcursion() {
               <h5 className="fw-bold text-success mb-2">
                 Programación de Fechas{" "}
                 <small className="text-muted" style={{ textTransform: "lowercase" }}>
-                  ({mostrarArchivadas ? "archivadas/pasadas" : "próximas abiertas"})
+                  {/* ({mostrarArchivadas ? "archivadas/pasadas" : "próximas abiertas"}) */}
                 </small>
               </h5>
 

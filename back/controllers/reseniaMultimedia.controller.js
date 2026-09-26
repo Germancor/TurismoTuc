@@ -326,7 +326,7 @@ export const getPendientesComprobantes = async (req, res) => {
         t.apellido AS turista_apellido,
         t.email    AS email,
         e.titulo   AS excursion_titulo,
-        fe.fecha   AS fecha
+        fe.fecha   AS fecha_excursion
       FROM Multimedia m
       LEFT JOIN Turistas t ON m.id_turista = t.id_turista
       LEFT JOIN Reservas r ON m.id_reserva = r.id_reserva

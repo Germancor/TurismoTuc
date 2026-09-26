@@ -143,7 +143,7 @@ export default function MainExcursiones() {
               <h5 className="fw-bold text-success mb-2">
                 Gestión de Excursiones{" "}
                 <small className="text-muted" style={{ textTransform: "lowercase" }}>
-                  ({mostrarArchivadas ? "archivadas" : "catálogo activo"})
+                {/*}  ({mostrarArchivadas ? "archivadas" : "catálogo activo"}) */}
                 </small>
               </h5>
 

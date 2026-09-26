@@ -185,7 +185,7 @@ export default function ReservasMain() {
             <h5 className="fw-bold text-success mb-2">
               Gestión de Reservas{" "}
               <small className="text-muted" style={{ textTransform: "lowercase" }}>
-                ({mostrarArchivadas ? "archivadas" : "activas"})
+                {/* ({mostrarArchivadas ? "archivadas" : "activas"}) */}
               </small>
             </h5>
 
@@ -208,9 +208,6 @@ export default function ReservasMain() {
             >
               <i className="bi bi-plus-circle me-1"></i> Crear Reserva
             </Button>
-
-            {/* 👈 NUEVO: Botón Toggle para mostrar Archivadas (Opción 2) */}
-            
 
             {/* Dropdown: Filtro por estado_reserva (Limpio de finalizadas/canceladas) */}
             <Dropdown align="end">

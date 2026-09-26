@@ -145,7 +145,7 @@ export default function MainTuristas() {
               <h5 className="fw-bold text-success mb-2">
                 Gestión de Turistas{" "}
                 <small className="text-muted" style={{ textTransform: "lowercase" }}>
-                  ({mostrarArchivadas ? "archivados" : "activos"})
+                  {/* ({mostrarArchivadas ? "archivados" : "activos"}) */}
                 </small>
               </h5>
 

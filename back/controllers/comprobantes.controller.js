@@ -9,10 +9,11 @@ export const subirComprobante = async (req, res) => {
   try {
     const { id_reserva, id_turista, descripcion } = req.body;
 
-    if (!id_reserva) return res.status(400).json({ message: "Falta id_reserva" });
-    if (!id_turista) return res.status(400).json({ message: "Falta id_turista" });
+    if (!id_reserva)
+      return res.status(400).json({ message: "Falta id_reserva" });
+    if (!id_turista)
+      return res.status(400).json({ message: "Falta id_turista" });
     if (!req.file) return res.status(400).json({ message: "Falta archivo" });
-
 
     const url = `/uploads/comprobantes/${req.file.filename}`;
 
@@ -23,8 +24,13 @@ export const subirComprobante = async (req, res) => {
         (?, ?, ?, ?, ?, 0, 'pendiente')
     `;
 
-    const params = ["comprobante", url, descripcion || null, id_turista, id_reserva];
-
+    const params = [
+      "comprobante",
+      url,
+      descripcion || null,
+      id_turista,
+      id_reserva,
+    ];
 
     const [result] = await pool.promise().query(sql, params);
 
@@ -35,7 +41,9 @@ export const subirComprobante = async (req, res) => {
     });
   } catch (err) {
     console.error("subirComprobante error:", err);
-    return res.status(500).json({ ok: false, message: "Error al guardar comprobante" });
+    return res
+      .status(500)
+      .json({ ok: false, message: "Error al guardar comprobante" });
   }
 };
 
@@ -44,43 +52,102 @@ export const subirComprobante = async (req, res) => {
 // GET /api/comprobantes/pendientes
 // -------------------------------------------------------------------
 export const getPendientesComprobantes = async (req, res) => {
-  const { page = 1, limit = 10, estado = 'pendiente' } = req.query;
-  const offset = (parseInt(page) - 1) * parseInt(limit);
+  const {
+    page = 1,
+    limit = 10,
+    estado = "pendiente",
+    fechaDesde,
+    fechaHasta,
+  } = req.query;
 
-  let whereClause = "m.tipo = 'comprobante' AND m.eliminado = 0";
-  let queryParams = [];
+  const pagina = parseInt(page);
+  const limite = parseInt(limit);
+  const offset = (pagina - 1) * limite;
 
-  if (estado !== 'todas') {
-    whereClause += " AND m.estado_moderacion = ?";
+  let whereClause = `
+    m.tipo = 'comprobante'
+    AND m.eliminado = 0
+  `;
+  const queryParams = [];
+
+  if (estado !== "todas") {
+    whereClause += ` AND m.estado_moderacion = ?`;
     queryParams.push(estado);
+  }
+  if (fechaDesde) {
+    whereClause += ` AND m.fecha_creacion >= ?`;
+    queryParams.push(`${fechaDesde} 00:00:00`);
+  }
+  if (fechaHasta) {
+    whereClause += ` AND m.fecha_creacion <= ?`;
+    queryParams.push(`${fechaHasta} 23:59:59`);
   }
 
   try {
+    // -------------------------------------------------------------
+    // TOTAL PARA PAGINACIÓN
+    // -------------------------------------------------------------
     const [countResult] = await pool.promise().query(
-      `SELECT COUNT(*) as total FROM Multimedia m WHERE ${whereClause}`,
+      `
+        SELECT COUNT(*) AS total
+        FROM Multimedia m
+        WHERE ${whereClause}
+      `,
       queryParams
     );
+
     const total = countResult[0].total;
 
-    const [rows] = await pool.promise().query(`
-      SELECT
-        m.id_multimedia, m.tipo, m.url, m.descripcion, m.id_turista, m.id_reserva, m.estado_moderacion,
-        t.nombre AS turista_nombre, t.apellido AS turista_apellido, t.email AS email,
-        e.titulo AS excursion_titulo, fe.fecha AS fecha
-      FROM Multimedia m
-      LEFT JOIN Turistas t ON m.id_turista = t.id_turista
-      LEFT JOIN Reservas r ON m.id_reserva = r.id_reserva
-      LEFT JOIN FechasExcursion fe ON r.id_fecha = fe.id_fecha
-      LEFT JOIN Excursiones e ON fe.id_excursion = e.id_excursion
-      WHERE ${whereClause}
-      ORDER BY m.id_multimedia DESC 
-      LIMIT ? OFFSET ?
-    `, [...queryParams, parseInt(limit), parseInt(offset)]);
+    // -------------------------------------------------------------
+    // DATOS
+    // -------------------------------------------------------------
+    const [rows] = await pool.promise().query(
+      `
+        SELECT
+          m.id_multimedia,
+          m.tipo,
+          m.url,
+          m.descripcion,
+          m.id_turista,
+          m.id_reserva,
+          m.estado_moderacion,
+          m.fecha_creacion,
 
-    return res.json({ 
-      data: rows, 
-      totalPages: Math.ceil(total / limit) || 1, 
-      currentPage: parseInt(page) 
+          t.nombre AS turista_nombre,
+          t.apellido AS turista_apellido,
+          t.email AS email,
+
+          e.titulo AS excursion_titulo,
+
+          -- Fecha de la excursión, independiente de fecha_creacion
+          fe.fecha AS fecha
+
+        FROM Multimedia m
+
+        LEFT JOIN Turistas t
+          ON m.id_turista = t.id_turista
+
+        LEFT JOIN Reservas r
+          ON m.id_reserva = r.id_reserva
+
+        LEFT JOIN FechasExcursion fe
+          ON r.id_fecha = fe.id_fecha
+
+        LEFT JOIN Excursiones e
+          ON fe.id_excursion = e.id_excursion
+
+        WHERE ${whereClause}
+
+        ORDER BY m.id_multimedia DESC
+
+        LIMIT ? OFFSET ?
+      `,
+      [...queryParams, limite, offset]
+    );
+    return res.json({
+      data: rows,
+      totalPages: Math.ceil(total / limite) || 1,
+      currentPage: pagina,
     });
   } catch (error) {
     console.error("Error al obtener comprobantes:", error);
@@ -103,10 +170,9 @@ export const aprobarComprobante = async (req, res) => {
   try {
     await conn.beginTransaction();
 
-
     const [updateMultimedia] = await conn.query(
       "UPDATE Multimedia SET estado_moderacion = 'aprobada' WHERE id_multimedia = ? AND tipo = 'comprobante'",
-      [id]
+      [id],
     );
 
     if (updateMultimedia.affectedRows === 0) {
@@ -114,10 +180,9 @@ export const aprobarComprobante = async (req, res) => {
       return res.status(404).json({ message: "Comprobante no encontrado" });
     }
 
-
     const [rows] = await conn.query(
       "SELECT id_reserva FROM Multimedia WHERE id_multimedia = ?",
-      [id]
+      [id],
     );
 
     const id_reserva = rows?.[0]?.id_reserva;
@@ -125,37 +190,34 @@ export const aprobarComprobante = async (req, res) => {
     if (!id_reserva) {
       await conn.rollback();
       return res.status(400).json({
-        message: "El comprobante no tiene id_reserva asociado"
+        message: "El comprobante no tiene id_reserva asociado",
       });
     }
-
 
     await conn.query(
       `UPDATE Pagos 
        SET estado_pago = 'aprobado'
        WHERE id_reserva = ? 
        AND eliminado = 0`,
-      [id_reserva]
+      [id_reserva],
     );
 
     await conn.commit();
 
     return res.json({
       ok: true,
-      message: "Comprobante aprobado y pago actualizado automáticamente"
+      message: "Comprobante aprobado y pago actualizado automáticamente",
     });
-
   } catch (error) {
     await conn.rollback();
     console.error("Error al aprobar comprobante:", error);
     return res.status(500).json({
-      message: "Error interno al aprobar comprobante"
+      message: "Error interno al aprobar comprobante",
     });
   } finally {
     conn.release();
   }
 };
-
 
 // -------------------------------------------------------------------
 // RECHAZAR COMPROBANTE
@@ -169,11 +231,13 @@ export const rechazarComprobante = async (req, res) => {
       .promise()
       .query(
         "UPDATE Multimedia SET estado_moderacion = 'rechazada' WHERE id_multimedia = ? AND tipo='comprobante'",
-        [id]
+        [id],
       );
 
     if (result.affectedRows === 0) {
-      return res.status(404).json({ ok: false, message: "Comprobante no encontrado" });
+      return res
+        .status(404)
+        .json({ ok: false, message: "Comprobante no encontrado" });
     }
 
     return res.json({ ok: true, message: "Comprobante rechazado" });
@@ -194,16 +258,14 @@ export const eliminarComprobante = async (req, res) => {
   const { id } = req.params;
 
   try {
-    const [result] = await pool
-      .promise()
-      .query(
-        `
+    const [result] = await pool.promise().query(
+      `
         UPDATE Multimedia
         SET eliminado = 1, fecha_eliminacion = NOW()
         WHERE id_multimedia = ? AND tipo='comprobante'
         `,
-        [id]
-      );
+      [id],
+    );
 
     if (result.affectedRows === 0) {
       return res.status(404).json({

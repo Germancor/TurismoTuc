@@ -25,12 +25,13 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
 export default function PerfilTurista() {
-  const { turista, token, setTurista, initSession, hydrated } = useTuristaStore();
+  const { turista, token, setTurista, initSession, hydrated } =
+    useTuristaStore();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [editMode, setEditMode] = useState(false);
-  
+
   // --- ESTADOS PARA PAGINACIÓN Y DATOS ---
   const [reservas, setReservas] = useState([]);
   const [mostrarFinalizadas, setMostrarFinalizadas] = useState(false);
@@ -91,12 +92,12 @@ export default function PerfilTurista() {
       try {
         const res = await axios.get(
           `${import.meta.env.VITE_API_URL}/turistas/${turistaId}/reservas?historial=${mostrarFinalizadas}&page=${currentPage}`,
-          { headers: { Authorization: `Bearer ${token}` } }
+          { headers: { Authorization: `Bearer ${token}` } },
         );
 
         // Leemos la estructura enviada por el nuevo Back-end
         const data = res.data;
-        
+
         setReservas(data.reservas || []);
         setTotalPages(data.totalPages || 1);
         setTotalRegistros(data.totalRegistros || 0);
@@ -136,7 +137,7 @@ export default function PerfilTurista() {
         await axios.put(
           `${import.meta.env.VITE_API_URL}/reservas/${idReserva}/cancelar`,
           {},
-          { headers: { Authorization: `Bearer ${token}` } }
+          { headers: { Authorization: `Bearer ${token}` } },
         );
 
         // Actualizamos estado localmente
@@ -144,8 +145,8 @@ export default function PerfilTurista() {
           prev.map((r) =>
             r.id_reserva === idReserva
               ? { ...r, estado_reserva: "cancelada" }
-              : r
-          )
+              : r,
+          ),
         );
 
         Swal.fire("¡Éxito!", "La reserva ha sido cancelada.", "success");
@@ -164,7 +165,7 @@ export default function PerfilTurista() {
       const res = await axios.put(
         `${import.meta.env.VITE_API_URL}/turistas/${turistaId}`,
         formData,
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}` } },
       );
 
       const turistaActualizado = res.data.turista || res.data;
@@ -189,12 +190,9 @@ export default function PerfilTurista() {
 
       doc.setFontSize(10);
       doc.setTextColor(100);
-      doc.text(
-        "Rivadavia 1051, San Miguel de Tucumán",
-        105,
-        27,
-        { align: "center" }
-      );
+      doc.text("Rivadavia 1051, San Miguel de Tucumán", 105, 27, {
+        align: "center",
+      });
       doc.line(20, 33, 190, 33);
 
       autoTable(doc, {
@@ -234,6 +232,13 @@ export default function PerfilTurista() {
       </div>
     );
   }
+
+  const formatearFecha = (fecha) => {
+    if (!fecha) return "-";
+
+    const [anio, mes, dia] = fecha.split("-");
+    return `${dia}/${mes}/${anio}`;
+  };
 
   return (
     <Container className="py-5">
@@ -378,8 +383,12 @@ export default function PerfilTurista() {
                     Historial
                   </Button>
                 </ButtonGroup>
-                
-                <Badge bg="light" text="secondary" className="border fw-medium px-2 py-1">
+
+                <Badge
+                  bg="light"
+                  text="secondary"
+                  className="border fw-medium px-2 py-1"
+                >
                   Total: {totalRegistros}
                 </Badge>
               </div>
@@ -392,9 +401,11 @@ export default function PerfilTurista() {
               >
                 <i className="bi bi-clock-history me-3 fs-4 text-warning"></i>
                 <div>
-                  <strong className="text-warning-emphasis">¡Recordatorio importante!</strong> Deberás presentarte
-                  en nuestra agencia (Rivadavia 1051), con una identificación,
-                  en el horario pactado.
+                  <strong className="text-warning-emphasis">
+                    ¡Recordatorio importante!
+                  </strong>{" "}
+                  Deberás presentarte en nuestra agencia (Rivadavia 1051), con
+                  una identificación, en el horario pactado.
                 </div>
               </Alert>
 
@@ -414,15 +425,21 @@ export default function PerfilTurista() {
                     reservas.map((r) => (
                       <tr key={r.id_reserva} className="border-bottom">
                         <td className="ps-4 py-4">
-                          <div className="fw-bold text-dark fs-6">{r.excursion_nombre}</div>
+                          <div className="fw-bold text-dark fs-6">
+                            {r.excursion_nombre}
+                          </div>
                           <div className="text-muted small mt-1 d-flex align-items-center gap-1">
-                            <i className="bi bi-people"></i> {r.cantidad_personas} personas
+                            <i className="bi bi-people"></i>{" "}
+                            {r.cantidad_personas} personas
                           </div>
                         </td>
 
                         <td className="py-4">
                           <div className="d-flex align-items-center gap-2">
-                            <div className="bg-light rounded-circle d-flex align-items-center justify-content-center text-primary" style={{width: '32px', height: '32px'}}>
+                            <div
+                              className="bg-light rounded-circle d-flex align-items-center justify-content-center text-primary"
+                              style={{ width: "32px", height: "32px" }}
+                            >
                               <i className="bi bi-person-fill"></i>
                             </div>
                             <span className="small fw-medium text-secondary">
@@ -434,7 +451,7 @@ export default function PerfilTurista() {
                         <td className="py-4">
                           <div className="fw-semibold text-dark">
                             <i className="bi bi-calendar3 me-2 text-muted"></i>
-                            {new Date(r.fecha_salida).toLocaleDateString("es-AR")}
+                            {formatearFecha(r.fecha_salida)}
                           </div>
                           <div className="small text-muted mt-1 ms-4">
                             <i className="bi bi-clock me-1"></i>
@@ -448,12 +465,12 @@ export default function PerfilTurista() {
                               r.estado_reserva === "confirmada"
                                 ? "bg-success-subtle text-success border border-success-subtle"
                                 : r.estado_reserva === "pendiente"
-                                ? "bg-warning-subtle text-warning-emphasis border border-warning-subtle"
-                                : r.estado_reserva === "finalizada"
-                                ? "bg-primary-subtle text-primary border border-primary-subtle"
-                                : r.estado_reserva === "cancelada"
-                                ? "bg-danger-subtle text-danger border border-danger-subtle"
-                                : "bg-secondary-subtle text-secondary border border-secondary-subtle"
+                                  ? "bg-warning-subtle text-warning-emphasis border border-warning-subtle"
+                                  : r.estado_reserva === "finalizada"
+                                    ? "bg-primary-subtle text-primary border border-primary-subtle"
+                                    : r.estado_reserva === "cancelada"
+                                      ? "bg-danger-subtle text-danger border border-danger-subtle"
+                                      : "bg-secondary-subtle text-secondary border border-secondary-subtle"
                             }`}
                           >
                             {(r.estado_reserva || "Pendiente").toUpperCase()}
@@ -467,7 +484,7 @@ export default function PerfilTurista() {
                                 variant="light"
                                 size="sm"
                                 className="rounded-circle d-flex align-items-center justify-content-center text-primary shadow-sm"
-                                style={{width: '36px', height: '36px'}}
+                                style={{ width: "36px", height: "36px" }}
                                 onClick={() => handleDescargarVoucher(r)}
                                 title="Descargar Voucher PDF"
                               >
@@ -481,7 +498,7 @@ export default function PerfilTurista() {
                                 variant="light"
                                 size="sm"
                                 className="rounded-circle d-flex align-items-center justify-content-center text-danger shadow-sm"
-                                style={{width: '36px', height: '36px'}}
+                                style={{ width: "36px", height: "36px" }}
                                 onClick={() =>
                                   handleCancelarReserva(r.id_reserva)
                                 }
@@ -496,7 +513,7 @@ export default function PerfilTurista() {
                                 variant="light"
                                 size="sm"
                                 className="rounded-circle d-flex align-items-center justify-content-center text-warning shadow-sm"
-                                style={{width: '36px', height: '36px'}}
+                                style={{ width: "36px", height: "36px" }}
                                 onClick={() =>
                                   navigate(`/calificar/${r.id_reserva}`)
                                 }
