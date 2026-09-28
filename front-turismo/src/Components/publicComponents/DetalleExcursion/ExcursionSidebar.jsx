@@ -1,19 +1,17 @@
 import { Card, Button, Form } from "react-bootstrap";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { getLocalizedPrice , i18n} from "../../../Language/index";
+import { getLocalizedPrice, i18n } from "../../../Language/index";
 import Swal from "sweetalert2";
 import useTuristaStore from "../../../store/useTuristaStore";
 import useCarritoStore from "../../../store/useCarritoStore";
 import "../../../styles/publicComponents/detalleex.css";
 
-
-
 export default function ExcursionSidebar({ excursion, fechas }) {
   const { t } = useTranslation();
   const [personas, setPersonas] = useState(1);
   const [fechaSeleccionada, setFechaSeleccionada] = useState(
-    fechas && fechas.length > 0 ? fechas[0].id_fecha : null
+    fechas && fechas.length > 0 ? fechas[0].id_fecha : null,
   );
 
   const { turista } = useTuristaStore();
@@ -48,7 +46,7 @@ export default function ExcursionSidebar({ excursion, fechas }) {
     }
 
     const fechaObj = fechas.find(
-      (f) => f.id_fecha === Number(fechaSeleccionada)
+      (f) => f.id_fecha === Number(fechaSeleccionada),
     );
     if (fechaObj && Number(personas) > fechaObj.cupo_disponible) {
       Swal.fire({
@@ -75,7 +73,9 @@ export default function ExcursionSidebar({ excursion, fechas }) {
 
         {/* Fechas disponibles */}
         <Form.Group className="mb-3">
-          <Form.Label className="fw-semibold">{t("sidebar.availableDates")}</Form.Label>
+          <Form.Label className="fw-semibold">
+            {t("sidebar.availableDates")}
+          </Form.Label>
 
           {fechas && fechas.length > 0 ? (
             <Form.Select
@@ -89,7 +89,8 @@ export default function ExcursionSidebar({ excursion, fechas }) {
                     day: "numeric",
                     month: "long",
                   })}{" "}
-                  — {f.hora_salida?.slice(0, 5)} hs ({f.cupo_disponible} lugares)
+                  — {f.hora_salida?.slice(0, 5)} hs ({f.cupo_disponible}{" "}
+                  lugares)
                 </option>
               ))}
             </Form.Select>

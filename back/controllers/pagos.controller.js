@@ -1,8 +1,6 @@
 import { pool } from "../config/DB.js";
 import "dotenv/config.js";
-import { preferenceClient , paymentClient} from "../config/mercadopago.js";
-
-
+import { preferenceClient, paymentClient } from "../config/mercadopago.js";
 
 /* ============================================================
    💳 SIMULACIÓN LOCAL DE PAYWAY
@@ -11,7 +9,6 @@ export const iniciarPagoPayway = async (req, res) => {
   const { id_reserva } = req.body;
 
   try {
-
     const [rows] = await pool.promise().query(
       `
       SELECT 
@@ -29,7 +26,6 @@ export const iniciarPagoPayway = async (req, res) => {
 
     const reserva = rows[0];
 
-
     const fakePayment = {
       id: `sim-${Date.now()}`,
       status: "approved",
@@ -38,7 +34,6 @@ export const iniciarPagoPayway = async (req, res) => {
       site_transaction_id: `RES-${reserva.id_reserva}`,
       message: "Pago simulado localmente (sin conexión a Payway)",
     };
-
 
     await pool.promise().query(
       `
@@ -54,7 +49,6 @@ export const iniciarPagoPayway = async (req, res) => {
       [id_reserva, reserva.monto_total],
     );
 
-
     await pool.promise().query(
       `
       UPDATE Reservas
@@ -63,7 +57,6 @@ export const iniciarPagoPayway = async (req, res) => {
       `,
       [id_reserva],
     );
-
 
     await pool.promise().query(
       `
@@ -76,7 +69,6 @@ export const iniciarPagoPayway = async (req, res) => {
     );
 
     console.log(`✅ Pago simulado con éxito para la reserva ${id_reserva}`);
-
 
     const [carritos] = await pool.promise().query(
       `
@@ -92,7 +84,6 @@ export const iniciarPagoPayway = async (req, res) => {
     if (carritos.length > 0) {
       const idsCarritos = carritos.map((c) => c.id_carrito);
 
-
       await pool.promise().query(
         `
     UPDATE CarritoItems
@@ -103,7 +94,6 @@ export const iniciarPagoPayway = async (req, res) => {
     `,
         [idsCarritos],
       );
-
 
       await pool.promise().query(
         `
@@ -116,7 +106,6 @@ export const iniciarPagoPayway = async (req, res) => {
 
       console.log("🧹 Carritos cerrados por Payway:", idsCarritos);
     }
-
 
     res.status(200).json({
       message: "Pago simulado correctamente (modo local)",
@@ -157,7 +146,6 @@ export const callbackPayway = async (req, res) => {
       `,
       [estadoPago, estadoReserva, id_reserva],
     );
-
 
     if (estadoPago === "aprobado") {
       await pool.promise().query(
@@ -292,7 +280,7 @@ export const getPagos = async (req, res) => {
       searchVal,
       searchVal,
       searchVal,
-      searchVal
+      searchVal,
     );
   }
 
@@ -301,18 +289,29 @@ export const getPagos = async (req, res) => {
   const offset = (parseInt(page) - 1) * parseInt(limit);
 
   const baseQuery = `
-    FROM Pagos p
-    LEFT JOIN MediosPago mp ON p.id_medio_pago = mp.id_medio_pago
-    LEFT JOIN Reservas r ON p.id_reserva = r.id_reserva
-    LEFT JOIN Turistas t ON r.id_turista = t.id_turista
-    ${whereClause}
-  `;
+  FROM Pagos p
+  LEFT JOIN MediosPago mp
+    ON p.id_medio_pago = mp.id_medio_pago
+
+  LEFT JOIN Reservas r
+    ON p.id_reserva = r.id_reserva
+
+  LEFT JOIN Carrito c
+    ON p.id_carrito = c.id_carrito
+
+  LEFT JOIN Turistas t
+    ON t.id_turista = COALESCE(r.id_turista, c.id_turista)
+
+  ${whereClause}
+`;
   const sqlCount = `SELECT COUNT(*) AS total ${baseQuery}`;
   const sqlData = `
     SELECT 
       p.id_pago,
       p.id_reserva,
+      p.id_carrito,
       p.monto,
+      p.mp_pago_id,
       p.estado_pago,
       p.moneda,
       p.referencia,
@@ -327,7 +326,6 @@ export const getPagos = async (req, res) => {
   `;
 
   const dataParams = [...params, parseInt(limit), parseInt(offset)];
-
 
   pool.query(sqlCount, params, (err, countResult) => {
     if (err) {
@@ -352,6 +350,46 @@ export const getPagos = async (req, res) => {
       });
     });
   });
+};
+
+export const getReservasPorCarrito = async (req, res) => {
+  const { id_carrito } = req.params;
+
+  try {
+    const [reservas] = await pool.promise().query(
+      `
+      SELECT
+        r.id_reserva,
+        r.id_carrito,
+        r.id_fecha,
+        r.id_turista,
+        r.cantidad_personas,
+        r.monto_total,
+        r.estado_reserva,
+        f.fecha,
+        e.titulo AS nombre_excursion
+      FROM Reservas r
+      INNER JOIN FechasExcursion f
+        ON r.id_fecha = f.id_fecha
+      INNER JOIN Excursiones e
+        ON f.id_excursion = e.id_excursion
+      WHERE r.id_carrito = ?
+        AND r.eliminado = 0
+      ORDER BY r.id_reserva ASC
+      `,
+      [id_carrito]
+    );
+
+    res.json(reservas);
+  } catch (error) {
+    console.error("Error al obtener reservas del carrito:", error);
+    console.error("❌ ERROR REAL AL OBTENER RESERVAS DEL CARRITO:");
+  console.error(error);
+    res.status(500).json({
+      message: "Error al obtener las reservas del carrito",
+      error: error.message,
+    });
+  }
 };
 
 // 🟡 Actualizar estado del pago (confirmar/rechazar)
@@ -385,7 +423,6 @@ export const updatePagoEstado = async (req, res) => {
 
     const pago = rows[0];
 
-
     await pool.promise().query(
       `
       UPDATE Pagos
@@ -394,7 +431,6 @@ export const updatePagoEstado = async (req, res) => {
       `,
       [nuevo_estado, referencia, id_pago],
     );
-
 
     if (nuevo_estado === "aprobado" && pago.estado_actual !== "aprobado") {
       await pool.promise().query(
@@ -415,7 +451,6 @@ export const updatePagoEstado = async (req, res) => {
         [pago.id_reserva],
       );
     }
-
 
     if (nuevo_estado === "rechazado") {
       await pool.promise().query(
@@ -457,7 +492,6 @@ export const crearPago = async (req, res) => {
   try {
     const { items, id_turista, reservas } = req.body;
 
-
     const [carritoRows] = await pool.promise().query(
       `
       SELECT id_carrito
@@ -478,7 +512,6 @@ export const crearPago = async (req, res) => {
     }
 
     const id_carrito = carritoRows[0].id_carrito;
-
 
     const preference = {
       items: items.map((item) => ({
@@ -501,10 +534,7 @@ export const crearPago = async (req, res) => {
       notification_url:
         "https://epizootically-semitropical-jannie.ngrok-free.dev/api/pagos/webhook/mercadopago",
 
-
       metadata: {
-
-
         id_carrito,
       },
     };
@@ -515,14 +545,14 @@ export const crearPago = async (req, res) => {
     );
 
     console.log(" ENVIANDO PREFERENCIA A MERCADO PAGO:");
-console.log(JSON.stringify(preference, null, 2));
+    console.log(JSON.stringify(preference, null, 2));
 
-const response = await preferenceClient.create({
-  body: preference,
-});
+    const response = await preferenceClient.create({
+      body: preference,
+    });
 
-console.log(" RESPUESTA DE MERCADO PAGO:");
-console.log(JSON.stringify(response, null, 2));
+    console.log(" RESPUESTA DE MERCADO PAGO:");
+    console.log(JSON.stringify(response, null, 2));
     const initPoint = response.init_point;
 
     if (!initPoint) {
@@ -542,119 +572,277 @@ console.log(JSON.stringify(response, null, 2));
 export const webhookMercadoPago = async (req, res) => {
   try {
     console.log("====================================");
-    console.log("📩 WEBHOOK MERCADO PAGO");
-    console.log("📩 Headers:", req.headers);
-    console.log("📩 Body:", req.body);
+    console.log("WEBHOOK MERCADO PAGO");
+    console.log("Headers:", req.headers);
+    console.log("Body:", req.body);
     console.log("====================================");
 
     const paymentId = req.body?.data?.id;
+
     if (!paymentId) {
       console.log("Webhook sin paymentId");
       return res.sendStatus(200);
     }
-    const payment = await paymentClient.get({ id: paymentId });
-    console.log("💳 Estado del pago:", payment.status);
 
+    // Obtener información real del pago desde Mercado Pago
+    const payment = await paymentClient.get({
+      id: paymentId,
+    });
+
+    console.log("Estado del pago:", payment.status);
+    console.log("Monto del pago:", payment.transaction_amount);
+    console.log("Payment ID:", paymentId);
+
+    // Solo procesamos pagos aprobados
     if (payment.status !== "approved") {
       return res.sendStatus(200);
     }
 
-    const { id_carrito } = payment.metadata || {};
+    // Obtener carrito
+    const id_carrito =
+      payment.metadata?.id_carrito || payment.external_reference;
+
     if (!id_carrito) {
-      console.error(" No llegó id_carrito en metadata");
+      console.error("No llegó id_carrito desde Mercado Pago");
       return res.sendStatus(200);
     }
 
+    console.log("Carrito recibido:", id_carrito);
 
     const connection = await pool.promise().getConnection();
+
     await connection.beginTransaction();
 
     try {
+      // ============================================================
+      // 1. BUSCAR CARRITO
+      // ============================================================
 
       const [carritoEstado] = await connection.query(
-        `SELECT estado, id_turista FROM Carrito WHERE id_carrito = ? FOR UPDATE`,
-        [id_carrito]
+        `
+        SELECT id_carrito, estado, id_turista
+        FROM Carrito
+        WHERE id_carrito = ?
+        FOR UPDATE
+        `,
+        [id_carrito],
       );
 
       if (carritoEstado.length === 0) {
-        console.error("❌ Carrito no encontrado");
-        await connection.commit();
+        console.error("Carrito no encontrado:", id_carrito);
+
+        await connection.rollback();
         connection.release();
+
         return res.sendStatus(200);
       }
 
+      // ============================================================
+      // 2. EVITAR WEBHOOK DUPLICADO
+      // ============================================================
+
       if (carritoEstado[0].estado === "cerrado") {
-        console.log("⚠️ Carrito ya procesado previamente. Ignorando webhook duplicado.");
+        console.log(
+          "Carrito ya procesado previamente. Ignorando webhook duplicado.",
+        );
+
         await connection.commit();
         connection.release();
+
         return res.sendStatus(200);
       }
 
       const id_turista = carritoEstado[0].id_turista;
 
+      // ============================================================
+      // 3. OBTENER ITEMS DEL CARRITO
+      // ============================================================
 
       const [items] = await connection.query(
-        `SELECT * FROM CarritoItems WHERE id_carrito = ? AND eliminado = 0`,
-        [id_carrito]
+        `
+        SELECT
+          id_item,
+          id_fecha,
+          cantidad_personas,
+          precio_unitario,
+          subtotal
+        FROM CarritoItems
+        WHERE id_carrito = ?
+          AND eliminado = 0
+        `,
+        [id_carrito],
       );
 
       if (items.length === 0) {
+        console.log("Carrito sin items:", id_carrito);
+
         await connection.commit();
         connection.release();
+
         return res.sendStatus(200);
       }
 
+      // ============================================================
+      // 4. CREAR RESERVAS
+      // ============================================================
+
+      const reservasCreadas = [];
 
       for (const item of items) {
-
-        await connection.query(
-          `INSERT INTO Reservas (id_fecha, id_turista, cantidad_personas, monto_total, estado_reserva)
-           VALUES (?, ?, ?, ?, 'confirmada')`,
-          [item.id_fecha, id_turista, item.cantidad_personas, item.subtotal]
+        const [resultadoReserva] = await connection.query(
+          `
+  INSERT INTO Reservas (
+    id_carrito,
+    id_fecha,
+    id_turista,
+    cantidad_personas,
+    monto_total,
+    estado_reserva
+  )
+  VALUES (?, ?, ?, ?, ?, 'confirmada')
+  `,
+          [
+            id_carrito,
+            item.id_fecha,
+            id_turista,
+            item.cantidad_personas,
+            item.subtotal,
+          ],
         );
 
+        reservasCreadas.push(resultadoReserva.insertId);
+
+        console.log(`Reserva creada: ${resultadoReserva.insertId}`);
+
+        // ==========================================================
+        // 5. DESCONTAR CUPOS
+        // ==========================================================
 
         await connection.query(
-          `UPDATE FechasExcursion 
-           SET cupo_disponible = cupo_disponible - ? 
-           WHERE id_fecha = ?`,
-          [item.cantidad_personas, item.id_fecha]
+          `
+          UPDATE FechasExcursion
+          SET cupo_disponible = GREATEST(
+            cupo_disponible - ?,
+            0
+          )
+          WHERE id_fecha = ?
+          `,
+          [item.cantidad_personas, item.id_fecha],
         );
       }
 
+      // ============================================================
+      // 6. CALCULAR TOTAL DEL PAGO
+      // ============================================================
 
-      await connection.query(
-        `UPDATE Carrito SET estado = 'cerrado' WHERE id_carrito = ?`,
-        [id_carrito]
+      const totalPago = items.reduce(
+        (total, item) => total + Number(item.subtotal),
+        0,
       );
 
+      // ============================================================
+      // 7. REGISTRAR UN ÚNICO PAGO DE MERCADO PAGO
+      // ============================================================
 
       await connection.query(
-        `UPDATE CarritoItems SET eliminado = 1, fecha_eliminacion = NOW() WHERE id_carrito = ?`,
-        [id_carrito]
+        `
+  INSERT INTO Pagos (
+    id_reserva,
+    id_carrito,
+    id_medio_pago,
+    monto,
+    estado_pago,
+    moneda,
+    mp_pago_id,
+    referencia
+  )
+  VALUES (
+    NULL,
+    ?,
+    (
+      SELECT id_medio_pago
+      FROM MediosPago
+      WHERE nombre_medio = 'Mercado Pago'
+        AND eliminado = 0
+      LIMIT 1
+    ),
+    ?,
+    'aprobado',
+    'ARS',
+    ?,
+    ?
+  )
+  `,
+        [id_carrito, totalPago, String(paymentId), `MP-${paymentId}`],
       );
 
+      console.log(
+        `Pago Mercado Pago registrado. Carrito: ${id_carrito}, MP: ${paymentId}, Total: ${totalPago}`,
+      );
+
+      // ============================================================
+      // 8. CERRAR CARRITO
+      // ============================================================
+
+      await connection.query(
+        `
+        UPDATE Carrito
+        SET estado = 'cerrado'
+        WHERE id_carrito = ?
+        `,
+        [id_carrito],
+      );
+
+      // ============================================================
+      // 9. ELIMINAR LÓGICAMENTE ITEMS
+      // ============================================================
+
+      await connection.query(
+        `
+        UPDATE CarritoItems
+        SET
+          eliminado = 1,
+          fecha_eliminacion = NOW()
+        WHERE id_carrito = ?
+          AND eliminado = 0
+        `,
+        [id_carrito],
+      );
+
+      // ============================================================
+      // 10. CONFIRMAR TRANSACCIÓN
+      // ============================================================
 
       await connection.commit();
       connection.release();
-      
-      console.log("✅ Reservas creadas y cupos descontados correctamente para carrito:", id_carrito);
+
+      console.log("====================================");
+      console.log("PAGO MERCADO PAGO PROCESADO");
+      console.log("Carrito:", id_carrito);
+      console.log("Turista:", id_turista);
+      console.log("Total:", totalPago);
+      console.log("Payment ID:", paymentId);
+      console.log("Reservas creadas:", reservasCreadas);
+      console.log("====================================");
+
       return res.sendStatus(200);
-
     } catch (dbError) {
-
       await connection.rollback();
       connection.release();
-      console.error("🔥 Error en base de datos durante el webhook, se revirtieron los cambios:", dbError);
-      return res.sendStatus(200); 
-    }
 
+      console.error(
+        "Error en base de datos durante el webhook. Se hizo rollback:",
+        dbError,
+      );
+
+      return res.sendStatus(200);
+    }
   } catch (error) {
-    console.error("🔥 ERROR REAL webhook MercadoPago:", error);
+    console.error("ERROR REAL WEBHOOK MERCADO PAGO:", error);
+
     return res.sendStatus(200);
   }
 };
-
 
 // export const webhookMercadoPago = async (req, res) => {
 //   try {

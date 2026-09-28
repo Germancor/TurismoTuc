@@ -1,12 +1,21 @@
 import express from "express";
-import { crearPago, webhookMercadoPago, iniciarPagoPayway, callbackPayway, registrarTransferencia, getPagos, updatePagoEstado, deletePago } from "../controllers/pagos.controller.js";
+import {
+  crearPago,
+  webhookMercadoPago,
+  iniciarPagoPayway,
+  callbackPayway,
+  registrarTransferencia,
+  getPagos,
+  getReservasPorCarrito,
+  updatePagoEstado,
+  deletePago,
+} from "../controllers/pagos.controller.js";
 
 const router = express.Router();
 
 //Simulacion mercadopago
 router.post("/crear-pago", crearPago);
 router.post("/webhook/mercadopago", webhookMercadoPago);
-
 
 // Simulación Payway
 router.post("/payway/iniciar", iniciarPagoPayway);
@@ -15,6 +24,7 @@ router.post("/payway/callback", callbackPayway);
 // Transferencia bancaria
 router.post("/transferencia", registrarTransferencia);
 
+router.get("/carrito/:id_carrito/reservas", getReservasPorCarrito);
 // GET todos los pagos
 router.get("/", getPagos);
 
