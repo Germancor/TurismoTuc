@@ -173,7 +173,7 @@ export default function MainFechasExcursion() {
                 {mostrarArchivadas ? (
                   <><i className="bi bi-arrow-left-circle me-1"></i> Volver a Relevantes</>
                 ) : (
-                  <><i className="bi bi-archive-fill me-1"></i> Mostrar Cerradas</>
+                  <><i className="bi bi-archive-fill me-1"></i> Mostrar Archivadas</>
                 )}
               </Button>
               <Button variant="outline-success" size="sm" onClick={exportToExcel} title="Exportar a Excel">
@@ -212,7 +212,7 @@ export default function MainFechasExcursion() {
                         </tr>
                         {fechasExc.map((f) => (
                           <tr key={f.id_fecha}>
-                            <td></td> {/* Espacio en blanco bajo el título de la excursión */}
+                            <td>-</td> {/* Espacio en blanco bajo el título de la excursión */}
                             <td>{new Date(f.fecha).toLocaleDateString()}</td>
                             <td>{f.hora_salida || "—"}</td>
                             <td>{f.cupo_maximo}</td>

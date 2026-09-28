@@ -647,7 +647,9 @@ export const getTodasLasFechasPaginadas = (req, res) => {
   const values = [];
 
   if (mostrarArchivadas === "true") {
-    condiciones.push("(f.eliminado = 1 OR f.estado = 'cerrada')");
+    condiciones.push(
+    "(f.eliminado = 1 OR f.estado = 'cerrada' OR f.fecha < CURDATE())"
+    );
   } else {
     condiciones.push("f.eliminado = 0");
     condiciones.push("f.estado = 'abierta'");
