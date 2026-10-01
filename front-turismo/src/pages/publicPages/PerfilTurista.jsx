@@ -508,7 +508,7 @@ export default function PerfilTurista() {
                               </Button>
                             )}
 
-                            {r.estado_reserva === "finalizada" && (
+                            {r.estado_reserva === "finalizada" && !r.tiene_resena && (
                               <Button
                                 variant="light"
                                 size="sm"

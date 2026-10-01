@@ -273,10 +273,14 @@ export const getReservasByTurista = async (req, res) => {
     const offset = (Number(page) - 1) * limit;
 
 
-    let baseWhere = "WHERE r.id_turista = ? AND r.eliminado = 0";
+    let baseWhere = "WHERE r.id_turista = ?";
+
     if (!isHistorial) {
+      baseWhere += " AND r.eliminado = 0";
       baseWhere += " AND r.estado_reserva IN ('confirmada', 'pendiente')";
-    }
+    } else {
+      baseWhere += " AND r.estado_reserva IN ('finalizada', 'cancelada')";
+    };
 
 
     const countSql = `SELECT COUNT(*) as total FROM Reservas r ${baseWhere}`;
@@ -286,16 +290,28 @@ export const getReservasByTurista = async (req, res) => {
 
 
     let orderClause = isHistorial
-      ? "ORDER BY FIELD(r.estado_reserva, 'confirmada', 'pendiente', 'finalizada', 'cancelada'), f.fecha ASC"
+      ? "ORDER BY FIELD(r.estado_reserva, 'finalizada', 'cancelada'), f.fecha DESC"
       : "ORDER BY FIELD(r.estado_reserva, 'confirmada', 'pendiente'), f.fecha ASC";
 
     const sql = `
-      SELECT 
-        r.id_reserva, e.titulo AS excursion_nombre, 
-        CONCAT(u.nombre, ' ', u.apellido) AS guia_nombre, 
-        e.ubicacion, r.cantidad_personas, r.monto_total, 
-        r.estado_reserva, r.fecha_reserva,
-        DATE_FORMAT(f.fecha, '%Y-%m-%d') AS fecha_salida, f.hora_salida
+  SELECT 
+    r.id_reserva, 
+    e.titulo AS excursion_nombre, 
+    CONCAT(u.nombre, ' ', u.apellido) AS guia_nombre, 
+    e.ubicacion, 
+    r.cantidad_personas, 
+    r.monto_total, 
+    r.estado_reserva, 
+    r.fecha_reserva,
+    DATE_FORMAT(f.fecha, '%Y-%m-%d') AS fecha_salida, 
+    f.hora_salida,
+
+    EXISTS (
+      SELECT 1
+      FROM Reseñas r2
+      WHERE r2.id_reserva = r.id_reserva
+        AND r2.id_turista = r.id_turista
+    ) AS tiene_resena
       FROM Reservas r
       LEFT JOIN FechasExcursion f ON r.id_fecha = f.id_fecha
       LEFT JOIN Excursiones e ON f.id_excursion = e.id_excursion

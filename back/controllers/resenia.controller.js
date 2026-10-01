@@ -153,15 +153,16 @@ export const createResena = (req, res) => {
   }
 
 
-  const sqlReserva = `
-    SELECT r.id_reserva, r.estado_reserva, e.id_excursion
+    const sqlReserva = `
+    SELECT r.id_reserva, r.id_turista, r.estado_reserva, e.id_excursion
     FROM Reservas r
     JOIN FechasExcursion f ON r.id_fecha = f.id_fecha
     JOIN Excursiones e ON f.id_excursion = e.id_excursion
-    WHERE r.id_reserva = ? AND r.eliminado = 0
-  `;
+    WHERE r.id_reserva = ?
+      AND r.id_turista = ?
+    `;
 
-  pool.query(sqlReserva, [id_reserva], (err, resultReserva) => {
+  pool.query(sqlReserva, [id_reserva, id_turista], (err, resultReserva) => {
     if (err) {
       console.error("Error al verificar reserva:", err);
       return res.status(500).json({ message: "Error interno al validar la reserva." });
@@ -180,10 +181,12 @@ export const createResena = (req, res) => {
 
 
     const sqlCheck = `
-      SELECT id_resena FROM Reseñas 
-      WHERE id_reserva = ? AND eliminado = 0
-    `;
-    pool.query(sqlCheck, [id_reserva], (err2, resultCheck) => {
+    SELECT id_resena
+    FROM Reseñas
+    WHERE id_reserva = ?
+      AND id_turista = ?
+  `;
+    pool.query(sqlCheck, [id_reserva, id_turista], (err2, resultCheck) => {
       if (err2) {
         console.error("Error al verificar reseña existente:", err2);
         return res.status(500).json({ message: "Error al validar reseña existente." });

@@ -27,24 +27,26 @@ export const getReservas = (req, res) => {
   } else {
     if (mostrarArchivadas === "true") {
 
-      condiciones.push("r.eliminado = 1");
-      
+  // Archivadas = canceladas y finalizadas,
+  // independientemente de eliminado
+  condiciones.push("r.estado_reserva IN ('finalizada', 'cancelada')");
 
+  if (estadoreserva && estadoreserva !== "relevantes" && estadoreserva !== "todas") {
+    condiciones.push(`r.estado_reserva = '${estadoreserva}'`);
+  }
 
+} else {
 
-      if (estadoreserva && estadoreserva !== "relevantes") {
-        condiciones.push(`r.estado_reserva = '${estadoreserva}'`);
-      }
-    } else {
+  // Activas = pendientes y confirmadas
+  condiciones.push("r.eliminado = 0");
 
-      condiciones.push("r.eliminado = 0");
-      
-      if (estadoreserva === "relevantes") {
-        condiciones.push("r.estado_reserva IN ('pendiente', 'confirmada')");
-      } else if (estadoreserva) {
-        condiciones.push(`r.estado_reserva = '${estadoreserva}'`);
-      }
-    }
+  if (estadoreserva === "relevantes") {
+    condiciones.push("r.estado_reserva IN ('pendiente', 'confirmada')");
+  } else if (estadoreserva && estadoreserva !== "todas") {
+    condiciones.push(`r.estado_reserva = '${estadoreserva}'`);
+  }
+
+}
   }
 
 
@@ -251,6 +253,7 @@ export const createReserva = (req, res) => {
 // Actualizar estado o datos de una reserva
 export const updateReserva = (req, res) => {
   const { id } = req.params;
+
   const {
     id_fecha,
     cantidad_personas,
@@ -259,42 +262,64 @@ export const updateReserva = (req, res) => {
   } = req.body;
 
   if (!id_fecha || !cantidad_personas || !estado_reserva) {
-    return res.status(400).json({ message: "Faltan datos obligatorios" });
+    return res.status(400).json({
+      message: "Faltan datos obligatorios",
+    });
   }
 
-  const estadosValidos = ["pendiente", "confirmada", "finalizada", "cancelada"];
+  const estadosValidos = [
+    "pendiente",
+    "confirmada",
+    "finalizada",
+    "cancelada",
+  ];
+
   if (!estadosValidos.includes(estado_reserva)) {
-    return res.status(400).json({ message: "Estado de reserva inválido" });
+    return res.status(400).json({
+      message: "Estado de reserva inválido",
+    });
   }
-
-
-  const autoEliminado = ["finalizada", "cancelada"].includes(estado_reserva) ? 1 : 0;
-  const fechaEliminacion = autoEliminado ? "NOW()" : "NULL";
 
   const sql = `
     UPDATE Reservas
-    SET id_fecha = ?, cantidad_personas = ?, monto_total = ?, estado_reserva = ?, 
-        eliminado = ?, fecha_eliminacion = ${fechaEliminacion}
+    SET 
+      id_fecha = ?,
+      cantidad_personas = ?,
+      monto_total = ?,
+      estado_reserva = ?
     WHERE id_reserva = ?;
   `;
 
   pool.query(
     sql,
-    [id_fecha, cantidad_personas, monto_total, estado_reserva, autoEliminado, id],
+    [
+      id_fecha,
+      cantidad_personas,
+      monto_total,
+      estado_reserva,
+      id,
+    ],
     (err, result) => {
       if (err) {
         console.error("Error al actualizar reserva:", err);
-        return res.status(500).json({ message: "Error al actualizar la reserva" });
+        return res.status(500).json({
+          message: "Error al actualizar la reserva",
+        });
       }
 
       if (result.affectedRows === 0) {
-        return res.status(404).json({ message: "Reserva no encontrada" });
+        return res.status(404).json({
+          message: "Reserva no encontrada",
+        });
       }
 
-      res.json({ message: "Reserva actualizada correctamente" });
+      res.json({
+        message: "Reserva actualizada correctamente",
+      });
     }
   );
 };
+
 // Baja lógica de reserva
 export const deleteReserva = (req, res) => {
   const { id } = req.params;
