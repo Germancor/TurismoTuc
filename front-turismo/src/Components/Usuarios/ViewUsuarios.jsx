@@ -16,11 +16,17 @@ export default function ViewUsuario() {
   useEffect(() => {
     const fetchUsuario = async () => {
       try {
-        const res = await axios.get(`${import.meta.env.VITE_API_URL}/usuarios/${id}`);
+        const res = await axios.get(
+          `${import.meta.env.VITE_API_URL}/usuarios/${id}`,
+        );
         setUsuario(res.data);
       } catch (err) {
-        console.error("Error al obtener usuario:", err);
-        setError("No se pudo cargar el usuario.");
+        if (err.response?.status === 404) {
+          setUsuario(null);
+        } else {
+          console.error("Error al obtener usuario:", err);
+          setError("No se pudo cargar el usuario.");
+        }
       } finally {
         setLoading(false);
       }
@@ -30,12 +36,16 @@ export default function ViewUsuario() {
 
   const fetchExcursionesYFechas = async () => {
     try {
-      const resExc = await axios.get(`${import.meta.env.VITE_API_URL}/excursiones/guia/${id}`);
+      const resExc = await axios.get(
+        `${import.meta.env.VITE_API_URL}/excursiones/guia/${id}`,
+      );
       const excursiones = resExc.data;
 
       const detalles = await Promise.all(
         excursiones.map(async (exc) => {
-          const resFechas = await axios.get(`${import.meta.env.VITE_API_URL}/excursiones/${exc.id_excursion}/fechas`);
+          const resFechas = await axios.get(
+            `${import.meta.env.VITE_API_URL}/excursiones/${exc.id_excursion}/fechas`,
+          );
           return resFechas.data.map((fecha) => ({
             id_excursion: exc.id_excursion,
             titulo: exc.titulo,
@@ -45,7 +55,7 @@ export default function ViewUsuario() {
             id_fecha: fecha.id_fecha,
             fecha: fecha.fecha,
           }));
-        })
+        }),
       );
 
       setExcursionesConFechas(detalles.flat());
@@ -64,11 +74,18 @@ export default function ViewUsuario() {
   const handleNotificar = async (item) => {
     setNotificando(item.id_fecha);
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL}/excursiones/notificar/${item.id_excursion}`, {
-        fecha: item.fecha,
-      });
+      await axios.post(
+        `${import.meta.env.VITE_API_URL}/excursiones/notificar/${item.id_excursion}`,
+        {
+          fecha: item.fecha,
+        },
+      );
 
-      Swal.fire("Correo enviado", "El guía fue notificado correctamente.", "success");
+      Swal.fire(
+        "Correo enviado",
+        "El guía fue notificado correctamente.",
+        "success",
+      );
 
       await fetchExcursionesYFechas();
     } catch (err) {
@@ -79,9 +96,45 @@ export default function ViewUsuario() {
     }
   };
 
-  if (loading) return <div className="text-center mt-5">Cargando datos del usuario...</div>;
-  if (error) return <div className="alert alert-danger text-center mt-4">{error}</div>;
-  if (!usuario) return <div className="alert alert-warning text-center mt-4">Usuario no encontrado.</div>;
+  if (loading)
+    return (
+      <div className="text-center mt-5">Cargando datos del usuario...</div>
+    );
+  if (error)
+    return <div className="alert alert-danger text-center mt-4">{error}</div>;
+  if (error) {
+    return (
+      <div className="container mt-4">
+        <div className="alert alert-danger text-center">{error}</div>
+      </div>
+    );
+  }
+
+  if (!usuario) {
+    return (
+      <div className="container mt-4">
+        <div className="card shadow-sm p-4 text-center">
+          <h5 className="fw-bold text-warning mb-2">Usuario no encontrado</h5>
+
+          <p className="text-muted mb-3">
+            Es posible que este usuario haya sido eliminado.
+            <br />
+            Si querés volver a visualizarlo, podés restaurarlo desde el listado
+            de usuarios.
+          </p>
+
+          <div>
+            <Button
+              variant="outline-secondary"
+              onClick={() => navigate("/dashboard-admin/usuarios")}
+            >
+              ← Volver al listado
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mt-4">
@@ -89,19 +142,29 @@ export default function ViewUsuario() {
         <h5 className="fw-bold text-success mb-3">Información del Usuario</h5>
 
         <div className="row mb-2">
-          <div className="col-md-6"><strong>Nombre:</strong> {usuario.nombre} {usuario.apellido}</div>
-          <div className="col-md-6"><strong>Email:</strong> {usuario.email}</div>
+          <div className="col-md-6">
+            <strong>Nombre:</strong> {usuario.nombre} {usuario.apellido}
+          </div>
+          <div className="col-md-6">
+            <strong>Email:</strong> {usuario.email}
+          </div>
         </div>
 
         <div className="row mb-2">
-          <div className="col-md-6"><strong>Teléfono:</strong> {usuario.telefono || "—"}</div>
-          <div className="col-md-6"><strong>Rol:</strong> {usuario.nombre_rol}</div>
+          <div className="col-md-6">
+            <strong>Teléfono:</strong> {usuario.telefono || "—"}
+          </div>
+          <div className="col-md-6">
+            <strong>Rol:</strong> {usuario.nombre_rol}
+          </div>
         </div>
 
         <div className="row mb-3">
           <div className="col-md-6">
             <strong>Estado:</strong>{" "}
-            <span className={`badge ${usuario.estado === "activo" ? "bg-success" : "bg-secondary"}`}>
+            <span
+              className={`badge ${usuario.estado === "activo" ? "bg-success" : "bg-secondary"}`}
+            >
               {usuario.estado}
             </span>
           </div>
@@ -133,10 +196,16 @@ export default function ViewUsuario() {
                       <Button
                         variant="primary"
                         size="sm"
-                        disabled={item.notificado || notificando === item.id_fecha}
+                        disabled={
+                          item.notificado || notificando === item.id_fecha
+                        }
                         onClick={() => handleNotificar(item)}
                       >
-                        {notificando === item.id_fecha ? <Spinner size="sm" /> : "Enviar correo"}
+                        {notificando === item.id_fecha ? (
+                          <Spinner size="sm" />
+                        ) : (
+                          "Enviar correo"
+                        )}
                       </Button>
                     </td>
                   </tr>
@@ -147,7 +216,10 @@ export default function ViewUsuario() {
         )}
 
         <div className="mt-3">
-          <button className="btn btn-outline-success" onClick={() => navigate("/dashboard-admin/usuarios")}>
+          <button
+            className="btn btn-outline-success"
+            onClick={() => navigate("/dashboard-admin/usuarios")}
+          >
             ← Volver al listado
           </button>
         </div>

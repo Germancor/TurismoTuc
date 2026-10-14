@@ -14,15 +14,45 @@ export default function ViewTurista() {
   useEffect(() => {
     const fetchTuristaYReservas = async () => {
       try {
-        const [turistaRes, reservasRes] = await Promise.all([
+        const [turistaRes, activasRes, historialRes] = await Promise.all([
           axios.get(`${import.meta.env.VITE_API_URL}/turistas/${id}`),
-          axios.get(`${import.meta.env.VITE_API_URL}/turistas/${id}/reservas?historial=true`),
+
+          axios.get(
+            `${import.meta.env.VITE_API_URL}/turistas/${id}/reservas?historial=false&page=1`,
+          ),
+
+          axios.get(
+            `${import.meta.env.VITE_API_URL}/turistas/${id}/reservas?historial=true&page=1`,
+          ),
         ]);
+
         setTurista(turistaRes.data);
-        setReservas(reservasRes.data.reservas);
+
+        const activas = activasRes.data.reservas || [];
+        const historial = historialRes.data.reservas || [];
+
+        const todasLasReservas = [...activas, ...historial];
+
+        todasLasReservas.sort((a, b) => {
+          const fechaA = a.fecha_salida || "";
+          const fechaB = b.fecha_salida || "";
+          return fechaB.localeCompare(fechaA);
+        });
+
+        setReservas(todasLasReservas);
       } catch (err) {
-        console.error("Error al obtener datos:", err);
-        Swal.fire("Error", "No se pudo cargar la información del turista.", "error");
+        if (err.response?.status === 404) {
+          setTurista(null);
+          setReservas([]);
+        } else {
+          console.error("Error al obtener datos:", err);
+
+          Swal.fire(
+            "Error",
+            "No se pudo cargar la información del turista.",
+            "error",
+          );
+        }
       } finally {
         setLoading(false);
       }
@@ -44,10 +74,25 @@ export default function ViewTurista() {
     return (
       <div className="container py-4">
         <Card className="shadow-sm p-4 text-center">
-          <h5 className="text-warning">Turista no encontrado</h5>
-          <Link to="/dashboard-admin/turistas" className="btn btn-outline-secondary mt-3">
-            ← Volver al listado
-          </Link>
+          <h5 className="text-warning mb-2">Turista no encontrado</h5>
+
+          <p className="text-muted mb-3">
+            Es posible que este turista haya sido eliminado.
+            <br />
+            Si querés volver a visualizar su información, podés restaurarlo
+            desde el listado archivados.
+          </p>
+
+          <div className="d-flex justify-content-center gap-2">
+            {/* Acá va tu botón/función de restaurar */}
+
+            <Link
+              to="/dashboard-admin/turistas"
+              className="btn btn-outline-secondary"
+            >
+              ← Volver al listado
+            </Link>
+          </div>
         </Card>
       </div>
     );
@@ -55,35 +100,53 @@ export default function ViewTurista() {
 
   return (
     <div className="container py-4">
-              <div className="col-12 col-md-6 mb-2 mb-md-0">
-          <Button variant="outline-secondary" size="sm" onClick={() => navigate(-1)}>
-            ← Volver
-          </Button>
-          <br />
-        </div>
+      <div className="col-12 col-md-6 mb-2 mb-md-0">
+        <Button
+          variant="outline-secondary"
+          size="sm"
+          onClick={() => navigate(-1)}
+        >
+          ← Volver
+        </Button>
         <br />
+      </div>
+      <br />
 
       <Card className="shadow-sm">
-      <div className="col-12 col-md-6 text-md-end">
-              <h4 className="fw-bold text-success mb-0">Información del Turista</h4>
-            </div>
+        <div className="col-12 col-md-6 text-md-end">
+          <h4 className="fw-bold text-success mb-0">Información del Turista</h4>
+        </div>
 
         <Card.Body>
           <div className="row mb-2">
-            <div className="col-md-6"><strong>Nombre:</strong> {turista.nombre} {turista.apellido}</div>
-            <div className="col-md-6"><strong>DNI:</strong> {turista.dni}</div>
+            <div className="col-md-6">
+              <strong>Nombre:</strong> {turista.nombre} {turista.apellido}
+            </div>
+            <div className="col-md-6">
+              <strong>DNI:</strong> {turista.dni}
+            </div>
           </div>
           <div className="row mb-2">
-            <div className="col-md-6"><strong>Email:</strong> {turista.email}</div>
-            <div className="col-md-6"><strong>Teléfono:</strong> {turista.telefono}</div>
+            <div className="col-md-6">
+              <strong>Email:</strong> {turista.email}
+            </div>
+            <div className="col-md-6">
+              <strong>Teléfono:</strong> {turista.telefono}
+            </div>
           </div>
           <div className="row mb-2">
-            <div className="col-md-6"><strong>Dirección:</strong> {turista.direccion || "—"}</div>
-            <div className="col-md-6"><strong>Nacionalidad:</strong> {turista.nacionalidad || "—"}</div>
+            <div className="col-md-6">
+              <strong>Dirección:</strong> {turista.direccion || "—"}
+            </div>
+            <div className="col-md-6">
+              <strong>Nacionalidad:</strong> {turista.nacionalidad || "—"}
+            </div>
           </div>
 
           <hr className="my-4" />
-          <h5 className="fw-bold text-secondary mb-3">Reservas / Viajes realizados</h5>
+          <h5 className="fw-bold text-secondary mb-3">
+            Reservas / Viajes realizados
+          </h5>
 
           {reservas.length > 0 ? (
             <Table responsive hover className="align-middle">
@@ -101,18 +164,24 @@ export default function ViewTurista() {
                 {reservas.map((r, i) => (
                   <tr key={r.id_reserva}>
                     <td>{i + 1}</td>
-                    <td>{r.excursion}</td>
+                    <td>{r.excursion_nombre}</td>
                     <td>{new Date(r.fecha_salida).toLocaleDateString()}</td>
                     <td>{r.cantidad_personas}</td>
                     <td>
-                      <span className={`badge ${
-                        r.estado === "confirmada"
-                          ? "bg-success"
-                          : r.estado === "pendiente"
-                          ? "bg-warning text-dark"
-                          : "bg-secondary"
-                      }`}>
-                        {r.estado}
+                      <span
+                        className={`badge ${
+                          r.estado_reserva === "confirmada"
+                            ? "bg-success"
+                            : r.estado_reserva === "pendiente"
+                              ? "bg-warning text-dark"
+                              : r.estado_reserva === "finalizada"
+                                ? "bg-primary"
+                                : r.estado_reserva === "cancelada"
+                                  ? "bg-danger"
+                                  : "bg-secondary"
+                        }`}
+                      >
+                        {(r.estado_reserva || "Sin estado").toUpperCase()}
                       </span>
                     </td>
                     <td>{new Date(r.fecha_reserva).toLocaleDateString()}</td>
@@ -121,7 +190,9 @@ export default function ViewTurista() {
               </tbody>
             </Table>
           ) : (
-            <p className="text-muted">No hay reservas registradas para este turista.</p>
+            <p className="text-muted">
+              No hay reservas registradas para este turista.
+            </p>
           )}
         </Card.Body>
       </Card>
